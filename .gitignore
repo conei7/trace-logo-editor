@@ -1,0 +1,14 @@
+*.log
+*.pid
+share-session.json
+
+data/*.json
+!data/.gitkeep
+
+decoded-candidate-*.txt
+recovered-*.json
+recovery-*.ldb
+recovery-leveldb-scan/
+
+.agents/
+.codex/

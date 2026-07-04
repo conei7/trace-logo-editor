@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>制約付きトレース型ロゴ文字エディタ</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="panel left-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Glyph Set</p>
+          <h1>ロゴ文字</h1>
+        </div>
+        <span id="glyphCount" class="count-badge">0</span>
+      </div>
+
+      <div id="folderTabs" class="folder-tabs" aria-label="フォルダ"></div>
+
+      <div id="charList" class="char-list" aria-label="文字一覧"></div>
+
+      <section class="section-block">
+        <div class="section-title">文字セット</div>
+        <textarea id="charSetInput" rows="10" spellcheck="false"></textarea>
+        <div class="button-row">
+          <button id="applyCharSet" class="primary-button" type="button">更新</button>
+          <button id="testSet" class="ghost-button" type="button">テスト</button>
+          <button id="allSet" class="ghost-button" type="button">全部</button>
+          <button id="latinSet" class="ghost-button" type="button">英数</button>
+          <button id="kanaSet" class="ghost-button" type="button">かな</button>
+          <button id="kataSet" class="ghost-button" type="button">カナ</button>
+          <button id="symbolSet" class="ghost-button" type="button">記号</button>
+          <button id="kanjiSet" class="ghost-button" type="button">漢字試作</button>
+          <button id="partSet" class="ghost-button" type="button">部品</button>
+          <button id="completedSet" class="ghost-button" type="button">完了分</button>
+          <button id="markCompleted" class="ghost-button" type="button">完了反映</button>
+        </div>
+        <p id="charSetNote" class="note-line"></p>
+      </section>
+    </aside>
+
+    <main class="workbench">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Current Glyph</p>
+          <div class="current-line">
+            <span id="currentChar" class="current-char">A</span>
+            <select id="glyphSelect" class="glyph-select" aria-label="文字選択"></select>
+            <button id="statusToggle" class="status-toggle" type="button" aria-pressed="false">未完成</button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button id="autoTrace" class="primary-button" type="button">自動入力</button>
+          <button id="undoButton" class="icon-button" type="button" title="Undo">↶</button>
+          <button id="redoButton" class="icon-button" type="button" title="Redo">↷</button>
+        </div>
+      </header>
+
+      <section class="canvas-stage" aria-label="編集キャンバス">
+        <canvas id="editorCanvas"></canvas>
+      </section>
+
+      <section class="sentence-panel" aria-label="文章プレビュー">
+        <div class="sentence-head">
+          <div>
+            <p class="eyebrow">Text Preview</p>
+            <h2>文章プレビュー</h2>
+          </div>
+          <div class="sentence-controls">
+            <label class="mini-range">
+              <span>サイズ</span>
+              <input id="previewSize" type="range" min="24" max="96" value="56">
+              <output id="previewSizeValue">56</output>
+            </label>
+            <label class="mini-range">
+              <span>字間</span>
+              <input id="previewTracking" type="range" min="-100" max="48" value="0">
+              <output id="previewTrackingValue">6</output>
+            </label>
+            <div class="preview-spacing-toggle segmented" role="group" aria-label="送り幅">
+              <button class="mode-button is-active" type="button" data-preview-spacing="mono">等幅</button>
+              <button class="mode-button" type="button" data-preview-spacing="proportional">詰め</button>
+            </div>
+            <label class="mini-range">
+              <span>太さ</span>
+              <input id="previewWeight" type="range" min="3" max="24" value="10">
+              <output id="previewWeightValue">10</output>
+            </label>
+          </div>
+        </div>
+        <textarea id="previewText" rows="8" spellcheck="false">ABCDE あいうえお</textarea>
+        <div id="sentencePreview" class="sentence-preview"></div>
+      </section>
+    </main>
+
+    <aside class="panel controls-panel">
+      <section class="section-block">
+        <div class="section-title">表示</div>
+        <label class="check-row"><input id="showReference" type="checkbox" checked>下敷き</label>
+        <label class="check-row"><input id="showGrid" type="checkbox" checked>グリッド</label>
+        <label class="check-row"><input id="showConfidence" type="checkbox" checked>信頼度</label>
+        <label class="check-row"><input id="showPreview" type="checkbox" checked>プレビュー</label>
+        <label class="check-row"><input id="showBaseline" type="checkbox" checked>英小文字ベースライン</label>
+        <label class="range-row">
+          <span>下敷き濃度</span>
+          <input id="referenceOpacity" type="range" min="0" max="100" value="24">
+          <output id="referenceOpacityValue">24%</output>
+        </label>
+        <label class="range-row">
+          <span>下から</span>
+          <input id="baselineFromBottom" type="range" min="1" max="5" value="1">
+          <output id="baselineFromBottomValue">2本目</output>
+        </label>
+        <label class="range-row">
+          <span>横セル</span>
+          <input id="gridCols" type="range" min="3" max="12" value="6">
+          <output id="gridColsValue">6</output>
+        </label>
+        <label class="range-row">
+          <span>縦セル</span>
+          <input id="gridRows" type="range" min="3" max="12" value="6">
+          <output id="gridRowsValue">6</output>
+        </label>
+        <div class="kanji-grid-presets" role="group" aria-label="漢字グリッド">
+          <button class="ghost-button" type="button" data-kanji-grid="5">漢字 5x5</button>
+          <button class="ghost-button" type="button" data-kanji-grid="6">漢字 6x6</button>
+          <button class="ghost-button" type="button" data-kanji-grid="7">漢字 7x7</button>
+          <button class="ghost-button" type="button" data-kanji-grid="8">漢字 8x8</button>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title">下敷き</div>
+        <label class="field-row">
+          <span>フォント</span>
+          <select id="fontSelect">
+            <option value="system-ui, sans-serif">System Sans</option>
+            <option value="serif">Serif</option>
+            <option value="monospace">Monospace</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Yu Gothic', 'Meiryo', sans-serif">Yu Gothic / Meiryo</option>
+            <option value="'Hiragino Sans', 'Yu Gothic', sans-serif">Hiragino / Yu Gothic</option>
+            <option value="'Noto Sans JP', 'Yu Gothic', sans-serif">Noto Sans JP</option>
+          </select>
+        </label>
+        <label class="file-row">
+          <span>Font</span>
+          <input id="fontUpload" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2">
+        </label>
+        <label class="range-row">
+          <span>拡大率</span>
+          <input id="refScale" type="range" min="55" max="130" value="86">
+          <output id="refScaleValue">86%</output>
+        </label>
+        <label class="range-row">
+          <span>左右位置</span>
+          <input id="refOffsetX" type="range" min="-100" max="100" value="0">
+          <output id="refOffsetXValue">0</output>
+        </label>
+        <label class="range-row">
+          <span>上下位置</span>
+          <input id="refOffsetY" type="range" min="-100" max="100" value="4">
+          <output id="refOffsetYValue">4</output>
+        </label>
+        <label class="range-row">
+          <span>太さ補正</span>
+          <input id="refWeight" type="range" min="0" max="24" value="0">
+          <output id="refWeightValue">0</output>
+        </label>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title">自動入力</div>
+        <label class="range-row">
+          <span>感度</span>
+          <input id="autoSensitivity" type="range" min="0" max="100" value="56">
+          <output id="autoSensitivityValue">56</output>
+        </label>
+        <label class="range-row">
+          <span>密度</span>
+          <input id="autoDensity" type="range" min="0" max="100" value="60">
+          <output id="autoDensityValue">60</output>
+        </label>
+        <label class="range-row">
+          <span>太さ想定</span>
+          <input id="autoProbe" type="range" min="8" max="46" value="24">
+          <output id="autoProbeValue">24</output>
+        </label>
+        <label class="range-row">
+          <span>横/縦優先</span>
+          <input id="autoBias" type="range" min="-50" max="50" value="0">
+          <output id="autoBiasValue">0</output>
+        </label>
+        <label class="range-row">
+          <span>連結優先</span>
+          <input id="autoConnect" type="range" min="0" max="100" value="20">
+          <output id="autoConnectValue">20</output>
+        </label>
+        <label class="range-row">
+          <span>簡略化</span>
+          <input id="autoSimplify" type="range" min="0" max="100" value="35">
+          <output id="autoSimplifyValue">35</output>
+        </label>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title">編集</div>
+        <div class="segmented" role="group" aria-label="編集モード">
+          <button class="mode-button is-active" type="button" data-mode="toggle">切替</button>
+          <button class="mode-button" type="button" data-mode="draw">追加</button>
+          <button class="mode-button" type="button" data-mode="erase">削除</button>
+          <button class="mode-button" type="button" data-mode="lock">確定</button>
+        </div>
+        <div class="button-grid">
+          <button id="alignLeft" class="ghost-button" type="button" title="左寄せ">←</button>
+          <button id="alignUp" class="ghost-button" type="button" title="上寄せ">↑</button>
+          <button id="alignDown" class="ghost-button" type="button" title="下寄せ">↓</button>
+          <button id="alignRight" class="ghost-button" type="button" title="右寄せ">→</button>
+          <button id="mirrorX" class="ghost-button" type="button">↔</button>
+          <button id="mirrorY" class="ghost-button" type="button">↕</button>
+          <button id="rotateCW" class="ghost-button" type="button">⟳</button>
+          <button id="clearGlyph" class="danger-button" type="button">消去</button>
+        </div>
+        <canvas id="previewCanvas" class="preview-canvas"></canvas>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title">漢字部品</div>
+        <label class="field-row">
+          <span>名前</span>
+          <select id="partNameSelect"></select>
+        </label>
+        <label id="partCustomNameRow" class="field-row">
+          <span>その他</span>
+          <input id="partNameInput" type="text" placeholder="任意の名前">
+        </label>
+        <button id="savePart" class="primary-button full-button" type="button">現在の文字を部品化</button>
+        <div id="partLibrary" class="part-library" aria-label="保存済み部品"></div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title">保存</div>
+        <div class="button-row">
+          <button id="saveJson" class="primary-button" type="button">JSON保存</button>
+          <button id="exportSvg" class="ghost-button" type="button">SVG</button>
+        </div>
+        <label class="file-row compact-file">
+          <span>JSON読込</span>
+          <input id="loadJson" type="file" accept=".json,application/json">
+        </label>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title">重複チェック</div>
+        <label class="range-row">
+          <span>類似度</span>
+          <input id="duplicateThreshold" type="range" min="70" max="100" value="88">
+          <output id="duplicateThresholdValue">88%</output>
+        </label>
+        <div class="button-row">
+          <button id="checkDuplicates" class="primary-button" type="button">チェック</button>
+          <button id="clearDuplicates" class="ghost-button" type="button">クリア</button>
+        </div>
+        <div id="duplicateCompare" class="duplicate-compare"></div>
+        <div id="duplicateResults" class="duplicate-results"></div>
+      </section>
+    </aside>
+  </div>
+</body>
+</html>
