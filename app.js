@@ -161,6 +161,7 @@ const els = {
   markCompleted: document.getElementById("markCompleted"),
   charSetNote: document.getElementById("charSetNote"),
   currentChar: document.getElementById("currentChar"),
+  currentWidthBadge: document.getElementById("currentWidthBadge"),
   glyphSelect: document.getElementById("glyphSelect"),
   statusToggle: document.getElementById("statusToggle"),
   canvas: document.getElementById("editorCanvas"),
@@ -622,6 +623,7 @@ function currentGlyph() {
 function syncAllControls() {
   const glyph = currentGlyph();
   els.currentChar.textContent = glyph.char;
+  syncCurrentWidthBadge(glyph.char);
   renderGlyphSelect();
   syncStatusToggle();
   syncModeControls();
@@ -865,7 +867,14 @@ function renderList() {
     status.className = `status-pill ${glyph.status === "完成" ? "is-done" : "is-todo"}`;
     status.textContent = glyph.status;
 
-    card.append(char, thumb, status);
+    const widthInfo = getSymbolWidthInfo(glyph.char);
+    const widthBadge = document.createElement("span");
+    widthBadge.className = "symbol-width-badge";
+    widthBadge.textContent = widthInfo ? widthInfo.label : "";
+    widthBadge.hidden = !widthInfo;
+    if (widthInfo) widthBadge.dataset.width = widthInfo.id;
+
+    card.append(char, thumb, status, widthBadge);
     fragment.append(card);
   });
 
@@ -874,6 +883,7 @@ function renderList() {
     ? String(state.glyphs.length)
     : `${visibleGlyphs.length}/${state.glyphs.length}`;
   els.currentChar.textContent = currentGlyph().char;
+  syncCurrentWidthBadge(currentGlyph().char);
   renderGlyphSelect();
   syncStatusToggle();
 }
@@ -926,12 +936,30 @@ function matchesFolderFilter(glyph, filter) {
 function renderGlyphSelect() {
   const options = state.glyphs.map((glyph, index) => {
     const option = document.createElement("option");
+    const widthInfo = getSymbolWidthInfo(glyph.char);
     option.value = String(index);
-    option.textContent = `${glyph.char}  ${glyph.status}`;
+    option.textContent = widthInfo ? `${glyph.char}  ${widthInfo.label}  ${glyph.status}` : `${glyph.char}  ${glyph.status}`;
     return option;
   });
   els.glyphSelect.replaceChildren(...options);
   els.glyphSelect.value = String(state.current);
+}
+
+function syncCurrentWidthBadge(char) {
+  const widthInfo = getSymbolWidthInfo(char);
+  els.currentWidthBadge.textContent = widthInfo ? widthInfo.label : "";
+  els.currentWidthBadge.classList.toggle("is-hidden", !widthInfo);
+  if (widthInfo) {
+    els.currentWidthBadge.dataset.width = widthInfo.id;
+  } else {
+    delete els.currentWidthBadge.dataset.width;
+  }
+}
+
+function getSymbolWidthInfo(char) {
+  if (ASCII_SYMBOL_CHARS.includes(char)) return { id: "half", label: "半角" };
+  if (FULL_WIDTH_SYMBOL_CHARS.includes(char)) return { id: "full", label: "全角" };
+  return null;
 }
 
 function renderEditor() {

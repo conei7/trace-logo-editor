@@ -161,7 +161,7 @@ button {
 .char-card {
   display: grid;
   grid-template-columns: 32px 1fr;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   align-items: center;
   gap: 3px 8px;
   min-height: 70px;
@@ -199,7 +199,7 @@ button {
 }
 
 .char-glyph {
-  grid-row: 1 / 3;
+  grid-row: 1 / 4;
   display: grid;
   place-items: center;
   width: 32px;
@@ -227,6 +227,36 @@ button {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.symbol-width-badge {
+  justify-self: start;
+  min-height: 20px;
+  padding: 2px 7px;
+  border: 1px solid #d8d0c3;
+  border-radius: 999px;
+  background: #f7f4ee;
+  color: #4b443b;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.symbol-width-badge[data-width="half"] {
+  border-color: #b9d7cc;
+  background: #edf8f3;
+  color: #0d6655;
+}
+
+.symbol-width-badge[data-width="full"] {
+  border-color: #d9c6ea;
+  background: #f6effb;
+  color: #6b3d8b;
+}
+
+.symbol-width-badge.is-hidden {
+  display: none;
 }
 
 .status-pill.is-done {
@@ -1049,6 +1079,10 @@ input[type="checkbox"] {
   }
 
   .status-pill {
+    grid-column: 1 / -1;
+  }
+
+  .char-card .symbol-width-badge {
     grid-column: 1 / -1;
   }
 
