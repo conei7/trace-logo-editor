@@ -136,6 +136,7 @@ const state = {
   historyStart: null,
   duplicateExactChars: new Set(),
   drawing: false,
+  rightErase: false,
   lastEdgeId: null,
   pendingToggle: null,
   longPressTimer: null,
@@ -575,6 +576,7 @@ function bindEvents() {
   els.canvas.addEventListener("pointerdown", onPointerDown);
   els.canvas.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerUp);
   els.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 }
 
@@ -1149,13 +1151,25 @@ function strokeEdge(context, edge, layout) {
 }
 
 function onPointerDown(event) {
-  els.canvas.setPointerCapture(event.pointerId);
+  const rightErase = isRightEraseEvent(event);
+  if (rightErase) event.preventDefault();
+  if (!rightErase && event.button !== 0) return;
+
   const edge = findEdgeAtEvent(event);
-  if (!edge) return;
+  if (!rightErase && !edge) return;
+
+  els.canvas.setPointerCapture(event.pointerId);
   state.drawing = true;
+  state.rightErase = rightErase;
   state.lastEdgeId = null;
+  state.pendingToggle = null;
   state.longPressHandled = false;
   beginHistory();
+
+  if (rightErase) {
+    if (edge) applyRightErase(edge.id);
+    return;
+  }
 
   if (state.mode === "toggle") {
     state.pendingToggle = edge.id;
@@ -1175,6 +1189,12 @@ function onPointerDown(event) {
 function onPointerMove(event) {
   if (!state.drawing) return;
   const edge = findEdgeAtEvent(event);
+
+  if (state.rightErase) {
+    if (edge && edge.id !== state.lastEdgeId) applyRightErase(edge.id);
+    return;
+  }
+
   if (!edge || edge.id === state.lastEdgeId) return;
 
   if (state.mode === "toggle") {
@@ -1185,19 +1205,27 @@ function onPointerMove(event) {
   applyEdgeMode(edge.id);
 }
 
-function onPointerUp() {
+function onPointerUp(event) {
   if (!state.drawing) return;
+  if (event && els.canvas.hasPointerCapture(event.pointerId)) {
+    els.canvas.releasePointerCapture(event.pointerId);
+  }
   clearLongPress();
 
-  if (state.mode === "toggle" && state.pendingToggle && !state.longPressHandled) {
+  if (!state.rightErase && state.mode === "toggle" && state.pendingToggle && !state.longPressHandled) {
     toggleEdge(state.pendingToggle);
   }
 
   state.drawing = false;
+  state.rightErase = false;
   state.pendingToggle = null;
   state.longPressHandled = false;
   finishHistory();
   renderAll();
+}
+
+function isRightEraseEvent(event) {
+  return event.button === 2 || (event.buttons & 2) === 2;
 }
 
 function clearLongPress() {
@@ -1250,6 +1278,15 @@ function applyEdgeMode(edgeId) {
   } else if (state.mode === "lock") {
     toggleLock(edgeId);
   }
+  renderAll();
+}
+
+function applyRightErase(edgeId) {
+  state.lastEdgeId = edgeId;
+  const glyph = currentGlyph();
+  glyph.activeEdges.delete(edgeId);
+  glyph.lockedEdges.delete(edgeId);
+  markManual(glyph);
   renderAll();
 }
 
