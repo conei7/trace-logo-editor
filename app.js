@@ -2,7 +2,7 @@
 
 const DEFAULT_GRID_COLS = 6;
 const DEFAULT_GRID_ROWS = 6;
-const MIN_GRID_SIZE = 3;
+const MIN_GRID_SIZE = 2;
 const MAX_GRID_SIZE = 12;
 const DIGIT_CHARS = splitGraphemes("0123456789");
 const LATIN_CHARS = splitGraphemes("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
@@ -148,6 +148,7 @@ const state = {
   rightErase: false,
   lastEdgeId: null,
   pendingToggle: null,
+  pendingToggleType: null,
   longPressTimer: null,
   longPressHandled: false
 };
@@ -295,6 +296,7 @@ function setGridSize(nextCols, nextRows, options = {}) {
       const hadActiveEdges = glyph.activeEdges.size > 0;
       glyph.activeEdges = remapEdgeSet(glyph.activeEdges, oldCols, oldRows, GRID_COLS, GRID_ROWS, oldEdgeById);
       glyph.lockedEdges = remapEdgeSet(glyph.lockedEdges, oldCols, oldRows, GRID_COLS, GRID_ROWS, oldEdgeById);
+      glyph.activePoints = remapPointSet(glyph.activePoints || new Set(), oldCols, oldRows, GRID_COLS, GRID_ROWS);
       glyph.candidateScores = {};
       if (hadActiveEdges && glyph.status !== "完成") {
         glyph.status = "未完成";
@@ -306,6 +308,14 @@ function setGridSize(nextCols, nextRows, options = {}) {
 function setKanjiGrid(size) {
   withHistory(() => {
     setGridSize(size, size);
+  });
+  syncAllControls();
+  renderAll();
+}
+
+function setGridSizeWithHistory(cols, rows) {
+  withHistory(() => {
+    setGridSize(cols, rows);
   });
   syncAllControls();
   renderAll();
@@ -349,6 +359,20 @@ function remapEdge(edge, oldCols, oldRows, newCols, newRows) {
   return range(from, to).map((y) => `v-${x}-${y}`);
 }
 
+function remapPointSet(pointIds, oldCols, oldRows, newCols, newRows) {
+  const scaleX = newCols / oldCols;
+  const scaleY = newRows / oldRows;
+  const remapped = new Set();
+  for (const id of pointIds || []) {
+    const match = /^p-(\d+)-(\d+)$/.exec(id);
+    if (!match) continue;
+    const x = clamp(Math.round(Number(match[1]) * scaleX), 0, newCols);
+    const y = clamp(Math.round(Number(match[2]) * scaleY), 0, newRows);
+    remapped.add(pointId(x, y));
+  }
+  return remapped;
+}
+
 function range(from, to) {
   const values = [];
   for (let value = from; value < to; value += 1) values.push(value);
@@ -360,6 +384,7 @@ function createGlyph(char) {
     char,
     activeEdges: new Set(),
     lockedEdges: new Set(),
+    activePoints: new Set(),
     candidateScores: {},
     referenceFont: "system-ui, sans-serif",
     referenceTransform: { ...DEFAULT_TRANSFORM },
@@ -396,6 +421,17 @@ function bindEvents() {
   els.kanaSet.addEventListener("click", () => useCharSet(HIRAGANA_CHARS));
   els.kataSet.addEventListener("click", () => useCharSet(KATAKANA_CHARS));
   els.symbolSet.addEventListener("click", () => useCharSet(uniqueChars([...ASCII_SYMBOL_CHARS, ...FULL_WIDTH_SYMBOL_CHARS])));
+  document.querySelectorAll("[data-symbol-width]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.symbolWidth === "half") {
+        useCharSet(ASCII_SYMBOL_CHARS);
+        setGridSizeWithHistory(2, 3);
+      } else {
+        useCharSet(FULL_WIDTH_SYMBOL_CHARS);
+        setGridSizeWithHistory(3, 4);
+      }
+    });
+  });
   els.kanjiSet.addEventListener("click", () => {
     useCharSet(KANJI_TEST_CHARS);
     setKanjiGrid(6);
@@ -567,6 +603,7 @@ function bindEvents() {
       const glyph = currentGlyph();
       glyph.activeEdges.clear();
       glyph.lockedEdges.clear();
+      glyph.activePoints.clear();
       glyph.candidateScores = {};
       glyph.status = "未完成";
     });
@@ -772,7 +809,7 @@ function renderSentencePreview() {
       }
 
       const glyph = glyphByChar.get(char);
-      if (glyph && glyph.activeEdges.size > 0) {
+      if (glyph && hasGlyphMarks(glyph)) {
         const item = document.createElement("span");
         item.className = "preview-glyph";
         applyPreviewAdvance(item, glyph);
@@ -804,6 +841,10 @@ function renderSentencePreview() {
   els.sentencePreview.replaceChildren(fragment);
 }
 
+function hasGlyphMarks(glyph) {
+  return !!glyph && (glyph.activeEdges.size > 0 || (glyph.activePoints && glyph.activePoints.size > 0));
+}
+
 function applyPreviewSpacing(element, visualIndex) {
   if (visualIndex > 0) {
     element.style.marginLeft = `${state.preview.tracking}px`;
@@ -821,7 +862,7 @@ function getPreviewAdvanceMetrics(glyph) {
     return { advanceRatio: 1, shiftRatio: 0 };
   }
 
-  const bounds = getEdgeBounds(glyph.activeEdges);
+  const bounds = getGlyphBounds(glyph);
   if (!bounds) return { advanceRatio: 1, shiftRatio: 0 };
 
   const size = 100;
@@ -977,6 +1018,24 @@ function getSymbolWidthInfo(char) {
   return null;
 }
 
+function canUsePoints(glyph) {
+  return !!glyph && classifyGlyphFolder(glyph.char) === "symbol";
+}
+
+function pointId(x, y) {
+  return `p-${x}-${y}`;
+}
+
+function pointFromId(id) {
+  const match = /^p-(\d+)-(\d+)$/.exec(id);
+  if (!match) return null;
+  const x = Number(match[1]);
+  const y = Number(match[2]);
+  if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
+  if (x < 0 || x > GRID_COLS || y < 0 || y > GRID_ROWS) return null;
+  return { x, y };
+}
+
 function renderEditor() {
   const canvas = els.canvas;
   const dpr = window.devicePixelRatio || 1;
@@ -1007,6 +1066,7 @@ function renderEditor() {
   }
 
   drawActiveEdges(ctx, glyph, layout);
+  drawActivePoints(ctx, glyph, layout);
   drawIntersections(ctx, layout);
 }
 
@@ -1028,6 +1088,7 @@ function renderPreview() {
   canvas.style.display = "block";
   const layout = getLayout(width, height, 0.12);
   drawActiveEdges(previewCtx, currentGlyph(), layout, { finalOnly: true });
+  drawActivePoints(previewCtx, currentGlyph(), layout, { finalOnly: true });
 }
 
 function getLayout(width, height, paddingRatio = 0.1) {
@@ -1169,6 +1230,21 @@ function drawActiveEdges(context, glyph, layout, options = {}) {
   context.restore();
 }
 
+function drawActivePoints(context, glyph, layout, options = {}) {
+  if (!glyph.activePoints || glyph.activePoints.size === 0) return;
+  context.save();
+  context.fillStyle = options.finalOnly ? "#171a18" : "#0f766e";
+  for (const id of glyph.activePoints) {
+    const point = pointFromId(id);
+    if (!point) continue;
+    const canvasPoint = pointToCanvas(layout, point.x, point.y);
+    context.beginPath();
+    context.arc(canvasPoint.x, canvasPoint.y, Math.max(4, layout.cell * 0.075), 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+}
+
 function drawIntersections(context, layout) {
   context.save();
   context.fillStyle = "#1d211f";
@@ -1198,54 +1274,58 @@ function onPointerDown(event) {
   if (rightErase) event.preventDefault();
   if (!rightErase && event.button !== 0) return;
 
-  const edge = findEdgeAtEvent(event);
-  if (!rightErase && !edge) return;
+  const target = findEditTargetAtEvent(event);
+  if (!rightErase && !target) return;
 
   els.canvas.setPointerCapture(event.pointerId);
   state.drawing = true;
   state.rightErase = rightErase;
   state.lastEdgeId = null;
   state.pendingToggle = null;
+  state.pendingToggleType = null;
   state.longPressHandled = false;
   beginHistory();
 
   if (rightErase) {
-    if (edge) applyRightErase(edge.id);
+    if (target) applyRightErase(target);
     return;
   }
 
   if (state.mode === "toggle") {
-    state.pendingToggle = edge.id;
+    state.pendingToggle = target.id;
+    state.pendingToggleType = target.type;
     state.longPressTimer = window.setTimeout(() => {
-      toggleLock(edge.id);
+      if (target.type === "edge") toggleLock(target.id);
+      if (target.type === "point") togglePoint(target.id);
       state.longPressHandled = true;
       state.pendingToggle = null;
+      state.pendingToggleType = null;
       finishHistory();
       renderAll();
     }, 520);
     return;
   }
 
-  applyEdgeMode(edge.id);
+  applyEditMode(target);
 }
 
 function onPointerMove(event) {
   if (!state.drawing) return;
-  const edge = findEdgeAtEvent(event);
+  const target = findEditTargetAtEvent(event);
 
   if (state.rightErase) {
-    if (edge && edge.id !== state.lastEdgeId) applyRightErase(edge.id);
+    if (target && target.id !== state.lastEdgeId) applyRightErase(target);
     return;
   }
 
-  if (!edge || edge.id === state.lastEdgeId) return;
+  if (!target || target.id === state.lastEdgeId) return;
 
   if (state.mode === "toggle") {
     clearLongPress();
     return;
   }
 
-  applyEdgeMode(edge.id);
+  applyEditMode(target);
 }
 
 function onPointerUp(event) {
@@ -1256,12 +1336,17 @@ function onPointerUp(event) {
   clearLongPress();
 
   if (!state.rightErase && state.mode === "toggle" && state.pendingToggle && !state.longPressHandled) {
-    toggleEdge(state.pendingToggle);
+    if (state.pendingToggleType === "point") {
+      togglePoint(state.pendingToggle);
+    } else {
+      toggleEdge(state.pendingToggle);
+    }
   }
 
   state.drawing = false;
   state.rightErase = false;
   state.pendingToggle = null;
+  state.pendingToggleType = null;
   state.longPressHandled = false;
   finishHistory();
   renderAll();
@@ -1300,6 +1385,37 @@ function findEdgeAtEvent(event) {
   return bestDistance <= tolerance ? best : null;
 }
 
+function findEditTargetAtEvent(event) {
+  const pointId = findPointAtEvent(event);
+  if (pointId) return { type: "point", id: pointId };
+  const edge = findEdgeAtEvent(event);
+  return edge ? { type: "edge", id: edge.id } : null;
+}
+
+function findPointAtEvent(event) {
+  if (!canUsePoints(currentGlyph())) return null;
+  const rect = els.canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const layout = getLayout(rect.width, rect.height);
+  let best = null;
+  let bestDistance = Infinity;
+  const tolerance = Math.max(12, layout.cell * 0.14);
+
+  for (let py = 0; py <= GRID_ROWS; py += 1) {
+    for (let px = 0; px <= GRID_COLS; px += 1) {
+      const point = pointToCanvas(layout, px, py);
+      const distance = Math.hypot(x - point.x, y - point.y);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = pointId(px, py);
+      }
+    }
+  }
+
+  return bestDistance <= tolerance ? best : null;
+}
+
 function distanceToSegment(px, py, x1, y1, x2, y2) {
   const vx = x2 - x1;
   const vy = y2 - y1;
@@ -1324,12 +1440,36 @@ function applyEdgeMode(edgeId) {
   renderAll();
 }
 
-function applyRightErase(edgeId) {
-  state.lastEdgeId = edgeId;
+function applyEditMode(target) {
+  if (target.type === "point") {
+    applyPointMode(target.id);
+    return;
+  }
+  applyEdgeMode(target.id);
+}
+
+function applyRightErase(target) {
+  state.lastEdgeId = target.id;
   const glyph = currentGlyph();
-  glyph.activeEdges.delete(edgeId);
-  glyph.lockedEdges.delete(edgeId);
+  if (target.type === "point") {
+    glyph.activePoints.delete(target.id);
+  } else {
+    glyph.activeEdges.delete(target.id);
+    glyph.lockedEdges.delete(target.id);
+  }
   markManual(glyph);
+  renderAll();
+}
+
+function applyPointMode(pointIdValue) {
+  state.lastEdgeId = pointIdValue;
+  if (state.mode === "draw") {
+    setPoint(pointIdValue, true);
+  } else if (state.mode === "erase") {
+    setPoint(pointIdValue, false);
+  } else if (state.mode === "lock") {
+    setPoint(pointIdValue, true);
+  }
   renderAll();
 }
 
@@ -1337,6 +1477,22 @@ function toggleEdge(edgeId) {
   const glyph = currentGlyph();
   const active = glyph.activeEdges.has(edgeId);
   setEdge(edgeId, !active, !active);
+}
+
+function togglePoint(pointIdValue) {
+  const glyph = currentGlyph();
+  setPoint(pointIdValue, !glyph.activePoints.has(pointIdValue));
+}
+
+function setPoint(pointIdValue, active) {
+  const glyph = currentGlyph();
+  if (!canUsePoints(glyph)) return;
+  if (active) {
+    glyph.activePoints.add(pointIdValue);
+  } else {
+    glyph.activePoints.delete(pointIdValue);
+  }
+  markManual(glyph);
 }
 
 function setEdge(edgeId, active, lockWhenOn) {
@@ -1521,6 +1677,7 @@ function transformCurrentEdges(mapper) {
     const glyph = currentGlyph();
     glyph.activeEdges = new Set(Array.from(glyph.activeEdges, mapper).filter(Boolean));
     glyph.lockedEdges = new Set(Array.from(glyph.lockedEdges, mapper).filter(Boolean));
+    glyph.activePoints = transformPointSet(glyph.activePoints || new Set(), mapperPointFromEdgeMapper(mapper));
     markManual(glyph);
   });
   renderAll();
@@ -1531,6 +1688,7 @@ function rotateCurrentClockwise() {
   const oldEdgeById = EDGE_BY_ID;
   const activeIds = Array.from(glyph.activeEdges);
   const lockedIds = Array.from(glyph.lockedEdges);
+  const activePointIds = Array.from(glyph.activePoints || []);
 
   withHistory(() => {
     const rotatedActive = new Set();
@@ -1551,6 +1709,7 @@ function rotateCurrentClockwise() {
 
     glyph.activeEdges = rotatedActive;
     glyph.lockedEdges = rotatedLocked;
+    glyph.activePoints = transformPointSet(activePointIds, (point) => ({ x: oldRows - point.y, y: point.x }));
     glyph.candidateScores = {};
     markManual(glyph);
   });
@@ -1561,7 +1720,7 @@ function rotateCurrentClockwise() {
 
 function alignCurrentEdges(direction) {
   const glyph = currentGlyph();
-  const bounds = getEdgeBounds(glyph.activeEdges);
+  const bounds = getGlyphBounds(glyph);
   if (!bounds) return;
 
   let dx = 0;
@@ -1575,6 +1734,7 @@ function alignCurrentEdges(direction) {
   withHistory(() => {
     glyph.activeEdges = shiftEdgeSet(glyph.activeEdges, dx, dy);
     glyph.lockedEdges = shiftEdgeSet(glyph.lockedEdges, dx, dy);
+    glyph.activePoints = shiftPointSet(glyph.activePoints || new Set(), dx, dy);
     glyph.candidateScores = {};
     markManual(glyph);
   });
@@ -1750,6 +1910,25 @@ function getEdgeBounds(edgeIds) {
   return minX === Infinity ? null : { minX, minY, maxX, maxY };
 }
 
+function getGlyphBounds(glyph) {
+  const edgeBounds = getEdgeBounds(glyph.activeEdges || new Set());
+  let minX = edgeBounds ? edgeBounds.minX : Infinity;
+  let minY = edgeBounds ? edgeBounds.minY : Infinity;
+  let maxX = edgeBounds ? edgeBounds.maxX : -Infinity;
+  let maxY = edgeBounds ? edgeBounds.maxY : -Infinity;
+
+  for (const id of glyph.activePoints || []) {
+    const point = pointFromId(id);
+    if (!point) continue;
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+
+  return minX === Infinity ? null : { minX, minY, maxX, maxY };
+}
+
 function shiftEdgeSet(edgeIds, dx, dy) {
   const shifted = new Set();
   for (const id of edgeIds) {
@@ -1762,6 +1941,42 @@ function shiftEdgeSet(edgeIds, dx, dy) {
     if (nextId && EDGE_BY_ID.has(nextId)) shifted.add(nextId);
   }
   return shifted;
+}
+
+function shiftPointSet(pointIds, dx, dy) {
+  const shifted = new Set();
+  for (const id of pointIds || []) {
+    const point = pointFromId(id);
+    if (!point) continue;
+    const x = point.x + dx;
+    const y = point.y + dy;
+    if (x >= 0 && x <= GRID_COLS && y >= 0 && y <= GRID_ROWS) {
+      shifted.add(pointId(x, y));
+    }
+  }
+  return shifted;
+}
+
+function transformPointSet(pointIds, mapper) {
+  const transformed = new Set();
+  for (const id of pointIds || []) {
+    const point = pointFromId(id);
+    if (!point) continue;
+    const next = mapper(point);
+    if (!next) continue;
+    const x = Math.round(next.x);
+    const y = Math.round(next.y);
+    if (x >= 0 && x <= GRID_COLS && y >= 0 && y <= GRID_ROWS) {
+      transformed.add(pointId(x, y));
+    }
+  }
+  return transformed;
+}
+
+function mapperPointFromEdgeMapper(mapper) {
+  if (mapper === mirrorXEdge) return (point) => ({ x: GRID_COLS - point.x, y: point.y });
+  if (mapper === mirrorYEdge) return (point) => ({ x: point.x, y: GRID_ROWS - point.y });
+  return (point) => point;
 }
 
 function mirrorXEdge(id) {
@@ -2177,8 +2392,8 @@ function focusGlyph(index) {
 
 function nudgeGlyphByIndex(index, dx, dy) {
   const glyph = state.glyphs[index];
-  if (!glyph || glyph.activeEdges.size === 0) return;
-  const bounds = getEdgeBounds(glyph.activeEdges);
+  if (!glyph || !hasGlyphMarks(glyph)) return;
+  const bounds = getGlyphBounds(glyph);
   if (!bounds) return;
   if (bounds.minX + dx < 0 || bounds.maxX + dx > GRID_COLS) return;
   if (bounds.minY + dy < 0 || bounds.maxY + dy > GRID_ROWS) return;
@@ -2186,6 +2401,7 @@ function nudgeGlyphByIndex(index, dx, dy) {
   withHistory(() => {
     glyph.activeEdges = shiftEdgeSet(glyph.activeEdges, dx, dy);
     glyph.lockedEdges = shiftEdgeSet(glyph.lockedEdges, dx, dy);
+    glyph.activePoints = shiftPointSet(glyph.activePoints || new Set(), dx, dy);
     glyph.candidateScores = {};
   });
 
@@ -2324,7 +2540,16 @@ function buildSvg(glyph, options) {
       return `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="square"/>`;
     })
     .join("");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox.map(round).join(" ")}" role="img" aria-label="${escapeAttr(glyph.char)}" preserveAspectRatio="xMidYMid meet">${lines}</svg>`;
+  const points = Array.from(glyph.activePoints || [])
+    .map(pointFromId)
+    .filter(Boolean)
+    .map((point) => {
+      const cx = left + point.x * cell;
+      const cy = top + (point.y + yOffsetCells) * cell;
+      return `<circle cx="${round(cx)}" cy="${round(cy)}" r="${round(strokeWidth * 0.42)}" fill="#171a18"/>`;
+    })
+    .join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox.map(round).join(" ")}" role="img" aria-label="${escapeAttr(glyph.char)}" preserveAspectRatio="xMidYMid meet">${lines}${points}</svg>`;
   return includeXml ? `<?xml version="1.0" encoding="UTF-8"?>\n${svg}\n` : svg;
 }
 
@@ -2358,7 +2583,7 @@ function getSvgViewBox(glyph, options) {
   const { size, strokeWidth, pad } = options;
   const previewTopPadCells = options.previewTopPadCells || 0;
   const previewBottomPadCells = options.previewBottomPadCells || 0;
-  const bounds = options.trim || options.trimX ? getEdgeBounds(glyph.activeEdges) : null;
+  const bounds = options.trim || options.trimX ? getGlyphBounds(glyph) : null;
   const cell = Math.min((size - pad * 2) / GRID_COLS, (size - pad * 2) / GRID_ROWS);
   if (!bounds) {
     if (previewTopPadCells || previewBottomPadCells) {
@@ -2430,6 +2655,7 @@ function serializeProject() {
       folder: classifyGlyphFolder(glyph.char),
       activeEdges: Array.from(glyph.activeEdges),
       lockedEdges: Array.from(glyph.lockedEdges),
+      activePoints: Array.from(glyph.activePoints || []),
       candidateScores: { ...glyph.candidateScores },
       autoSettings: { ...glyph.autoSettings },
       status: glyph.status
@@ -2507,6 +2733,7 @@ function normalizeGlyph(item) {
   const glyph = createGlyph(item.char || "?");
   glyph.activeEdges = new Set((item.activeEdges || []).filter((id) => EDGE_BY_ID.has(id)));
   glyph.lockedEdges = new Set((item.lockedEdges || []).filter((id) => EDGE_BY_ID.has(id)));
+  glyph.activePoints = new Set((item.activePoints || []).filter((id) => pointFromId(id)));
   glyph.candidateScores = item.candidateScores || {};
   glyph.referenceFont = item.referenceFont || glyph.referenceFont;
   glyph.referenceTransform = { ...DEFAULT_TRANSFORM, ...(item.referenceTransform || {}) };

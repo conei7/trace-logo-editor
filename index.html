@@ -33,6 +33,8 @@
           <button id="kanaSet" class="ghost-button" type="button">かな</button>
           <button id="kataSet" class="ghost-button" type="button">カナ</button>
           <button id="symbolSet" class="ghost-button" type="button">記号</button>
+          <button class="ghost-button" type="button" data-symbol-width="half">半角記号</button>
+          <button class="ghost-button" type="button" data-symbol-width="full">全角記号</button>
           <button id="kanjiSet" class="ghost-button" type="button">漢字試作</button>
           <button class="ghost-button" type="button" data-kanji-grade="1">1年</button>
           <button class="ghost-button" type="button" data-kanji-grade="2">2年</button>
@@ -124,12 +126,12 @@
         </label>
         <label class="range-row">
           <span>横セル</span>
-          <input id="gridCols" type="range" min="3" max="12" value="6">
+          <input id="gridCols" type="range" min="2" max="12" value="6">
           <output id="gridColsValue">6</output>
         </label>
         <label class="range-row">
           <span>縦セル</span>
-          <input id="gridRows" type="range" min="3" max="12" value="6">
+          <input id="gridRows" type="range" min="2" max="12" value="6">
           <output id="gridRowsValue">6</output>
         </label>
         <div class="kanji-grid-presets" role="group" aria-label="漢字グリッド">
