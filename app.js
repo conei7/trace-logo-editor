@@ -273,6 +273,12 @@ function createEdges(cols, rows) {
       edges.push({ id: `v-${x}-${y}`, type: "v", x1: x, y1: y, x2: x, y2: y + 1 });
     }
   }
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < cols; x += 1) {
+      edges.push({ id: `d1-${x}-${y}`, type: "d1", x1: x, y1: y, x2: x + 1, y2: y + 1 });
+      edges.push({ id: `d2-${x}-${y}`, type: "d2", x1: x + 1, y1: y, x2: x, y2: y + 1 });
+    }
+  }
   return edges;
 }
 
@@ -340,6 +346,13 @@ function remapEdgeSet(edgeIds, oldCols, oldRows, newCols, newRows, oldEdgeById) 
 function remapEdge(edge, oldCols, oldRows, newCols, newRows) {
   const scaleX = newCols / oldCols;
   const scaleY = newRows / oldRows;
+  if (edge.type === "d1" || edge.type === "d2") {
+    const x1 = clamp(Math.round(edge.x1 * scaleX), 0, newCols);
+    const y1 = clamp(Math.round(edge.y1 * scaleY), 0, newRows);
+    const x2 = clamp(Math.round(edge.x2 * scaleX), 0, newCols);
+    const y2 = clamp(Math.round(edge.y2 * scaleY), 0, newRows);
+    return diagonalEdgeIdsBetween({ x: x1, y: y1 }, { x: x2, y: y2 });
+  }
   if (edge.type === "h") {
     const y = clamp(Math.round(edge.y1 * scaleY), 0, newRows);
     let x1 = clamp(Math.round(edge.x1 * scaleX), 0, newCols);
@@ -1022,6 +1035,10 @@ function canUsePoints(glyph) {
   return !!glyph && classifyGlyphFolder(glyph.char) === "symbol";
 }
 
+function canUseDiagonalEdges(glyph) {
+  return !!glyph && classifyGlyphFolder(glyph.char) === "kanji" && GRID_COLS === 4 && GRID_ROWS === 4;
+}
+
 function pointId(x, y) {
   return `p-${x}-${y}`;
 }
@@ -1055,6 +1072,7 @@ function renderEditor() {
 
   if (state.view.showGrid) {
     drawGrid(ctx, layout);
+    drawDiagonalGuides(ctx, glyph, layout);
   }
 
   if (shouldShowBaseline(glyph)) {
@@ -1158,6 +1176,19 @@ function drawGrid(context, layout) {
   context.restore();
 }
 
+function drawDiagonalGuides(context, glyph, layout) {
+  if (!canUseDiagonalEdges(glyph)) return;
+  context.save();
+  context.strokeStyle = "#beb5a8";
+  context.lineWidth = 1;
+  context.globalAlpha = 0.28;
+  context.setLineDash([3, 5]);
+  for (const edge of EDGES) {
+    if (isDiagonalEdge(edge)) strokeEdge(context, edge, layout);
+  }
+  context.restore();
+}
+
 function drawBaselineGuide(context, layout) {
   const baselineY = getBaselineY();
   const line = pointToCanvas(layout, 0, baselineY);
@@ -1218,7 +1249,7 @@ function drawActiveEdges(context, glyph, layout, options = {}) {
   context.save();
   context.lineCap = "square";
   context.lineJoin = "miter";
-  for (const id of glyph.activeEdges) {
+  for (const id of drawableEdgeIds(glyph)) {
     const edge = EDGE_BY_ID.get(id);
     if (!edge) continue;
     const locked = glyph.lockedEdges.has(id);
@@ -1228,6 +1259,14 @@ function drawActiveEdges(context, glyph, layout, options = {}) {
     strokeEdge(context, edge, layout);
   }
   context.restore();
+}
+
+function drawableEdgeIds(glyph) {
+  const allowDiagonal = canUseDiagonalEdges(glyph);
+  return Array.from(glyph.activeEdges || []).filter((id) => {
+    const edge = EDGE_BY_ID.get(id);
+    return edge && (!isDiagonalEdge(edge) || allowDiagonal);
+  });
 }
 
 function drawActivePoints(context, glyph, layout, options = {}) {
@@ -1371,8 +1410,10 @@ function findEdgeAtEvent(event) {
   let best = null;
   let bestDistance = Infinity;
   const tolerance = Math.max(14, layout.cell * 0.16);
+  const allowDiagonal = canUseDiagonalEdges(currentGlyph());
 
   for (const edge of EDGES) {
+    if (isDiagonalEdge(edge) && !allowDiagonal) continue;
     const a = pointToCanvas(layout, edge.x1, edge.y1);
     const b = pointToCanvas(layout, edge.x2, edge.y2);
     const distance = distanceToSegment(x, y, a.x, a.y, b.x, b.y);
@@ -1383,6 +1424,10 @@ function findEdgeAtEvent(event) {
   }
 
   return bestDistance <= tolerance ? best : null;
+}
+
+function isDiagonalEdge(edge) {
+  return edge && (edge.type === "d1" || edge.type === "d2");
 }
 
 function findEditTargetAtEvent(event) {
@@ -1533,9 +1578,10 @@ function runAutoTrace(glyph) {
   const simplify = settings.simplify / 100;
   const threshold = clamp(0.34 - sensitivity * 0.24 - (density - 0.5) * 0.1, 0.045, 0.42);
   const limitRatio = 0.18 + density * 0.52 - simplify * 0.32;
-  const limit = clamp(Math.round(EDGES.length * limitRatio), Math.min(4, EDGES.length), EDGES.length);
+  const candidateEdges = getTraceCandidateEdges(glyph);
+  const limit = clamp(Math.round(candidateEdges.length * limitRatio), Math.min(4, candidateEdges.length), candidateEdges.length);
 
-  const sorted = EDGES
+  const sorted = candidateEdges
     .map((edge) => ({ edge, score: scores[edge.id] || 0 }))
     .sort((a, b) => b.score - a.score);
 
@@ -1570,13 +1616,18 @@ function scoreEdges(glyph) {
   const hFactor = 1 + Math.max(0, -settings.bias) / 100 - Math.max(0, settings.bias) / 150;
   const vFactor = 1 + Math.max(0, settings.bias) / 100 - Math.max(0, -settings.bias) / 150;
 
-  for (const edge of EDGES) {
+  for (const edge of getTraceCandidateEdges(glyph)) {
     const raw = sampleEdge(image.data, size, edge, radius, layout);
-    const factor = edge.type === "h" ? hFactor : vFactor;
+    const factor = edge.type === "h" ? hFactor : edge.type === "v" ? vFactor : (hFactor + vFactor) / 2;
     scores[edge.id] = clamp(raw * factor, 0, 1);
   }
 
   return scores;
+}
+
+function getTraceCandidateEdges(glyph) {
+  if (canUseDiagonalEdges(glyph)) return EDGES;
+  return EDGES.filter((edge) => !isDiagonalEdge(edge));
 }
 
 function drawMask(context, glyph, size, layout) {
@@ -1622,8 +1673,9 @@ function sampleEdge(data, size, edge, radius, layout) {
     const x = x1 + (x2 - x1) * t;
     const y = y1 + (y2 - y1) * t;
     for (let offset = -radius; offset <= radius; offset += offsetStep) {
-      const sx = edge.type === "h" ? x : x + offset;
-      const sy = edge.type === "h" ? y + offset : y;
+      const normal = getSampleNormal(edge);
+      const sx = x + normal.x * offset;
+      const sy = y + normal.y * offset;
       if (sx < 0 || sx >= size || sy < 0 || sy >= size) continue;
       const weight = 1 - Math.abs(offset) / (radius + 1);
       const ix = clamp(Math.round(sx), 0, size - 1);
@@ -1639,6 +1691,15 @@ function sampleEdge(data, size, edge, radius, layout) {
   }
 
   return totalWeight > 0 ? weightedInk / totalWeight : 0;
+}
+
+function getSampleNormal(edge) {
+  if (edge.type === "h") return { x: 0, y: 1 };
+  if (edge.type === "v") return { x: 1, y: 0 };
+  const dx = edge.x2 - edge.x1;
+  const dy = edge.y2 - edge.y1;
+  const length = Math.hypot(dx, dy) || 1;
+  return { x: -dy / length, y: dx / length };
 }
 
 function addConnectingEdges(selected, sorted, scores, threshold, settings) {
@@ -1982,15 +2043,19 @@ function mapperPointFromEdgeMapper(mapper) {
 function mirrorXEdge(id) {
   const edge = EDGE_BY_ID.get(id);
   if (!edge) return null;
-  if (edge.type === "h") return `h-${GRID_COLS - 1 - edge.x1}-${edge.y1}`;
-  return `v-${GRID_COLS - edge.x1}-${edge.y1}`;
+  return edgeIdFromPoints(
+    { x: GRID_COLS - edge.x1, y: edge.y1 },
+    { x: GRID_COLS - edge.x2, y: edge.y2 }
+  );
 }
 
 function mirrorYEdge(id) {
   const edge = EDGE_BY_ID.get(id);
   if (!edge) return null;
-  if (edge.type === "h") return `h-${edge.x1}-${GRID_ROWS - edge.y1}`;
-  return `v-${edge.x1}-${GRID_ROWS - 1 - edge.y1}`;
+  return edgeIdFromPoints(
+    { x: edge.x1, y: GRID_ROWS - edge.y1 },
+    { x: edge.x2, y: GRID_ROWS - edge.y2 }
+  );
 }
 
 function rotateCWEdge(id) {
@@ -2020,7 +2085,31 @@ function edgeIdFromPoints(a, b) {
   if (a.x === b.x) {
     return `v-${a.x}-${Math.min(a.y, b.y)}`;
   }
+  if (Math.abs(a.x - b.x) === 1 && Math.abs(a.y - b.y) === 1) {
+    if ((b.x - a.x) === (b.y - a.y)) {
+      return `d1-${Math.min(a.x, b.x)}-${Math.min(a.y, b.y)}`;
+    }
+    return `d2-${Math.min(a.x, b.x)}-${Math.min(a.y, b.y)}`;
+  }
   return null;
+}
+
+function diagonalEdgeIdsBetween(a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const steps = Math.max(Math.abs(dx), Math.abs(dy));
+  if (steps === 0 || Math.abs(dx) !== Math.abs(dy)) return [];
+  const stepX = dx / steps;
+  const stepY = dy / steps;
+  const ids = [];
+  for (let i = 0; i < steps; i += 1) {
+    const id = edgeIdFromPoints(
+      { x: a.x + stepX * i, y: a.y + stepY * i },
+      { x: a.x + stepX * (i + 1), y: a.y + stepY * (i + 1) }
+    );
+    if (id) ids.push(id);
+  }
+  return ids;
 }
 
 async function loadUploadedFont() {
@@ -2528,7 +2617,7 @@ function buildSvg(glyph, options) {
   const left = (size - gridWidth) / 2;
   const top = (size - gridHeight) / 2;
   const viewBox = getSvgViewBox(glyph, options);
-  const lines = Array.from(glyph.activeEdges)
+  const lines = drawableEdgeIds(glyph)
     .map((id) => EDGE_BY_ID.get(id))
     .filter(Boolean)
     .map((edge) => {
@@ -2731,8 +2820,8 @@ function restoreProject(project, options = {}) {
 
 function normalizeGlyph(item) {
   const glyph = createGlyph(item.char || "?");
-  glyph.activeEdges = new Set((item.activeEdges || []).filter((id) => EDGE_BY_ID.has(id)));
-  glyph.lockedEdges = new Set((item.lockedEdges || []).filter((id) => EDGE_BY_ID.has(id)));
+  glyph.activeEdges = new Set((item.activeEdges || []).filter((id) => isAllowedEdgeIdForGlyph(id, glyph)));
+  glyph.lockedEdges = new Set((item.lockedEdges || []).filter((id) => isAllowedEdgeIdForGlyph(id, glyph)));
   glyph.activePoints = new Set((item.activePoints || []).filter((id) => pointFromId(id)));
   glyph.candidateScores = item.candidateScores || {};
   glyph.referenceFont = item.referenceFont || glyph.referenceFont;
@@ -2740,6 +2829,12 @@ function normalizeGlyph(item) {
   glyph.autoSettings = { ...DEFAULT_AUTO, ...(item.autoSettings || {}) };
   glyph.status = normalizeStatus(item.status);
   return glyph;
+}
+
+function isAllowedEdgeIdForGlyph(id, glyph) {
+  const edge = EDGE_BY_ID.get(id);
+  if (!edge) return false;
+  return !isDiagonalEdge(edge) || canUseDiagonalEdges(glyph);
 }
 
 function normalizePart(item) {
