@@ -140,6 +140,7 @@ const state = {
   folderFilter: "all",
   kanjiMode: false,
   kanjiGradeFilter: "all",
+  kanjiListStrokeWidth: 9,
   current: 0,
   mode: "toggle",
   savedAt: null,
@@ -208,6 +209,8 @@ const els = {
   showBaseline: document.getElementById("showBaseline"),
   baselineFromBottom: document.getElementById("baselineFromBottom"),
   baselineFromBottomValue: document.getElementById("baselineFromBottomValue"),
+  kanjiListStrokeWidth: document.getElementById("kanjiListStrokeWidth"),
+  kanjiListStrokeWidthValue: document.getElementById("kanjiListStrokeWidthValue"),
   referenceOpacity: document.getElementById("referenceOpacity"),
   referenceOpacityValue: document.getElementById("referenceOpacityValue"),
   gridCols: document.getElementById("gridCols"),
@@ -562,6 +565,13 @@ function bindEvents() {
     renderAll();
   });
 
+  els.kanjiListStrokeWidth.addEventListener("input", () => {
+    state.kanjiListStrokeWidth = Number(els.kanjiListStrokeWidth.value);
+    els.kanjiListStrokeWidthValue.value = String(state.kanjiListStrokeWidth);
+    renderList();
+    persist();
+  });
+
   els.referenceOpacity.addEventListener("input", () => {
     state.view.referenceOpacity = Number(els.referenceOpacity.value) / 100;
     els.referenceOpacityValue.value = `${els.referenceOpacity.value}%`;
@@ -840,6 +850,8 @@ function syncAllControls() {
   els.gridColsValue.value = GRID_COLS;
   els.gridRows.value = GRID_ROWS;
   els.gridRowsValue.value = GRID_ROWS;
+  els.kanjiListStrokeWidth.value = state.kanjiListStrokeWidth;
+  els.kanjiListStrokeWidthValue.value = String(state.kanjiListStrokeWidth);
   syncGridControls();
   els.previewText.value = state.preview.text;
   els.previewSize.value = state.preview.size;
@@ -1056,7 +1068,12 @@ function renderList() {
 
     const thumb = document.createElement("span");
     thumb.className = "thumb";
-    thumb.innerHTML = buildSvg(glyph, { size: 96, strokeWidth: 9, pad: 12, includeXml: false });
+    thumb.innerHTML = buildSvg(glyph, {
+      size: 96,
+      strokeWidth: state.kanjiListStrokeWidth,
+      pad: 12,
+      includeXml: false
+    });
 
     const status = document.createElement("span");
     status.className = `status-pill ${glyph.status === "完成" ? "is-done" : "is-todo"}`;
@@ -2926,6 +2943,7 @@ function serializeProjectSettings() {
     folderFilter: state.folderFilter,
     kanjiMode: state.kanjiMode,
     kanjiGradeFilter: state.kanjiGradeFilter,
+    kanjiListStrokeWidth: state.kanjiListStrokeWidth,
     currentChar: currentGlyph().char,
     currentIndex: state.current,
     mode: state.mode,
@@ -2970,6 +2988,7 @@ function restoreProject(project, options = {}) {
   state.glyphs = project.glyphs.map((item) => normalizeGlyph(item));
   state.kanjiMode = settings.kanjiMode === true || (state.folderFilter === "kanji" && state.glyphs.length > 0 && state.glyphs.every((glyph) => isHan(glyph.char)));
   state.kanjiGradeFilter = normalizeKanjiGrade(settings.kanjiGradeFilter || "all");
+  state.kanjiListStrokeWidth = clamp(Number(settings.kanjiListStrokeWidth) || 9, 3, 18);
   if (state.kanjiMode) {
     state.folderFilter = "kanji";
     if (GRID_COLS !== 4 || GRID_ROWS !== 4) setGridSize(4, 4);
