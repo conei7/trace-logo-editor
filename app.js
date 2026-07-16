@@ -138,6 +138,8 @@ const state = {
   glyphs: TEST_CHARS.map(createGlyph),
   preview: { ...DEFAULT_PREVIEW },
   folderFilter: "all",
+  kanjiMode: false,
+  kanjiGradeFilter: "all",
   current: 0,
   mode: "toggle",
   savedAt: null,
@@ -323,8 +325,9 @@ function setGridSize(nextCols, nextRows, options = {}) {
 }
 
 function setKanjiGrid(size) {
+  if (Number(size) !== 4) return;
   withHistory(() => {
-    setGridSize(size, size);
+    setGridSize(4, 4);
   });
   syncAllControls();
   renderAll();
@@ -338,16 +341,47 @@ function setGridSizeWithHistory(cols, rows) {
   renderAll();
 }
 
-function enterKanjiMode(chars = KANJI_GRADE_CHAR_SETS[1]) {
-  const targetChars = chars && chars.length ? chars : KANJI_GRADE_CHAR_SETS[1];
-  useCharSet(targetChars);
+function enterKanjiMode(gradeOrChars = "all") {
+  const isCustomSet = Array.isArray(gradeOrChars);
+  useCharSet(isCustomSet ? gradeOrChars : KANJI_ELEMENTARY_CHARS);
+  state.kanjiMode = true;
+  state.kanjiGradeFilter = isCustomSet ? "all" : normalizeKanjiGrade(gradeOrChars);
   state.folderFilter = "kanji";
   state.view.showReference = true;
-  setKanjiGrid(4);
-  els.charSetNote.textContent = "漢字モード: 4x4 / 斜めあり / 点なし";
+  if (GRID_COLS !== 4 || GRID_ROWS !== 4) setKanjiGrid(4);
+  moveCurrentIntoVisibleKanjiGrade();
+  els.charSetNote.textContent = `漢字モード: ${state.kanjiGradeFilter === "all" ? "小学校" : `${state.kanjiGradeFilter}年`} / 4x4固定 / 斜めあり / 点なし`;
   syncAllControls();
   renderAll();
   persist();
+}
+
+function normalizeKanjiGrade(grade) {
+  return grade === "all" || KANJI_GRADE_CHAR_SETS[grade] ? String(grade) : "all";
+}
+
+function setKanjiGradeFilter(grade) {
+  const hasElementaryUniverse = KANJI_ELEMENTARY_CHARS.every((char) => state.glyphs.some((glyph) => glyph.char === char));
+  if (!state.kanjiMode || !hasElementaryUniverse) {
+    enterKanjiMode(grade);
+    return;
+  }
+  state.kanjiMode = true;
+  state.kanjiGradeFilter = normalizeKanjiGrade(grade);
+  state.folderFilter = "kanji";
+  moveCurrentIntoVisibleKanjiGrade();
+  els.charSetNote.textContent = `漢字一覧: ${state.kanjiGradeFilter === "all" ? "小学校" : `${state.kanjiGradeFilter}年`} / ${state.glyphs.length}字を保持`;
+  syncAllControls();
+  renderAll();
+  persist();
+}
+
+function moveCurrentIntoVisibleKanjiGrade() {
+  const visible = getVisibleGlyphs();
+  if (visible.length === 0) return;
+  if (!visible.some(({ index }) => index === state.current)) {
+    state.current = visible[0].index;
+  }
 }
 
 function clampGridSize(value) {
@@ -481,7 +515,7 @@ function bindEvents() {
   els.kanjiSet.addEventListener("click", enterKanjiMode);
   document.querySelectorAll("[data-kanji-grade]").forEach((button) => {
     button.addEventListener("click", () => {
-      enterKanjiMode(getKanjiGradeChars(button.dataset.kanjiGrade));
+      setKanjiGradeFilter(button.dataset.kanjiGrade);
     });
   });
   els.partSet.addEventListener("click", () => {
@@ -536,6 +570,10 @@ function bindEvents() {
   });
 
   els.gridCols.addEventListener("input", () => {
+    if (state.kanjiMode) {
+      syncAllControls();
+      return;
+    }
     withHistory(() => {
       setGridSize(els.gridCols.value, GRID_ROWS);
     });
@@ -544,6 +582,10 @@ function bindEvents() {
   });
 
   els.gridRows.addEventListener("input", () => {
+    if (state.kanjiMode) {
+      syncAllControls();
+      return;
+    }
     withHistory(() => {
       setGridSize(GRID_COLS, els.gridRows.value);
     });
@@ -745,9 +787,11 @@ function currentGlyph() {
 }
 
 function goToRelativeGlyph(delta) {
-  if (state.glyphs.length <= 1) return;
-  const nextIndex = (state.current + delta + state.glyphs.length) % state.glyphs.length;
-  focusGlyph(nextIndex);
+  const visible = getVisibleGlyphs();
+  if (visible.length <= 1) return;
+  const currentVisibleIndex = visible.findIndex(({ index }) => index === state.current);
+  const nextVisibleIndex = (currentVisibleIndex + delta + visible.length) % visible.length;
+  focusGlyph(visible[nextVisibleIndex].index);
 }
 
 function syncAllControls() {
@@ -796,6 +840,7 @@ function syncAllControls() {
   els.gridColsValue.value = GRID_COLS;
   els.gridRows.value = GRID_ROWS;
   els.gridRowsValue.value = GRID_ROWS;
+  syncGridControls();
   els.previewText.value = state.preview.text;
   els.previewSize.value = state.preview.size;
   els.previewSizeValue.value = state.preview.size;
@@ -804,6 +849,21 @@ function syncAllControls() {
   els.previewWeight.value = state.preview.weight;
   els.previewWeightValue.value = state.preview.weight;
   syncPreviewSpacingButtons();
+}
+
+function syncGridControls() {
+  const fixed = state.kanjiMode;
+  els.gridCols.disabled = fixed;
+  els.gridRows.disabled = fixed;
+  els.kanjiGridButtons.forEach((button) => {
+    button.disabled = fixed || button.dataset.kanjiGrid !== "4";
+  });
+  if (fixed && (GRID_COLS !== 4 || GRID_ROWS !== 4)) {
+    els.gridCols.value = "4";
+    els.gridColsValue.value = "4";
+    els.gridRows.value = "4";
+    els.gridRowsValue.value = "4";
+  }
 }
 
 function syncModeControls() {
@@ -1014,7 +1074,7 @@ function renderList() {
   });
 
   els.charList.replaceChildren(fragment);
-  els.glyphCount.textContent = state.folderFilter === "all"
+  els.glyphCount.textContent = visibleGlyphs.length === state.glyphs.length
     ? String(state.glyphs.length)
     : `${visibleGlyphs.length}/${state.glyphs.length}`;
   els.currentChar.textContent = getGlyphDisplayChar(currentGlyph().char);
@@ -1047,7 +1107,13 @@ function renderFolderTabs() {
 function getVisibleGlyphs() {
   return state.glyphs
     .map((glyph, index) => ({ glyph, index }))
-    .filter(({ glyph }) => matchesFolderFilter(glyph, state.folderFilter));
+    .filter(({ glyph }) => matchesFolderFilter(glyph, state.folderFilter))
+    .filter(({ glyph }) => matchesKanjiGrade(glyph));
+}
+
+function matchesKanjiGrade(glyph) {
+  if (!state.kanjiMode || state.folderFilter !== "kanji" || state.kanjiGradeFilter === "all") return true;
+  return getKanjiGradeChars(state.kanjiGradeFilter).includes(glyph.char);
 }
 
 function getFolderCounts() {
@@ -1069,7 +1135,7 @@ function matchesFolderFilter(glyph, filter) {
 }
 
 function renderGlyphSelect() {
-  const options = state.glyphs.map((glyph, index) => {
+  const options = getVisibleGlyphs().map(({ glyph, index }) => {
     const option = document.createElement("option");
     const widthInfo = getSymbolWidthInfo(glyph.char);
     option.value = String(index);
@@ -1083,7 +1149,7 @@ function renderGlyphSelect() {
 }
 
 function syncGlyphNavButtons() {
-  const disabled = state.glyphs.length <= 1;
+  const disabled = getVisibleGlyphs().length <= 1;
   els.prevGlyph.disabled = disabled;
   els.nextGlyph.disabled = disabled;
 }
@@ -2248,9 +2314,18 @@ function applyCharSet(text) {
     return;
   }
 
+  state.kanjiMode = parsed.chars.length > 0 && parsed.chars.every(isHan);
+  if (!state.kanjiMode) state.kanjiGradeFilter = "all";
+
   withHistory(() => {
     const existing = new Map(state.glyphs.map((glyph) => [glyph.char, glyph]));
-    state.glyphs = parsed.chars.map((char) => existing.get(char) || createGlyph(char));
+    const remoteExisting = new Map((remoteProjectBaseline?.glyphs || []).map((glyph) => [glyph.char, glyph]));
+    state.glyphs = parsed.chars.map((char) => {
+      const localGlyph = existing.get(char);
+      if (localGlyph) return localGlyph;
+      const remoteGlyph = remoteExisting.get(char);
+      return remoteGlyph ? normalizeGlyph(remoteGlyph) : createGlyph(char);
+    });
     state.current = Math.min(state.current, state.glyphs.length - 1);
   });
 
@@ -2849,6 +2924,8 @@ function serializeProjectSettings() {
     },
     preview: { ...state.preview },
     folderFilter: state.folderFilter,
+    kanjiMode: state.kanjiMode,
+    kanjiGradeFilter: state.kanjiGradeFilter,
     currentChar: currentGlyph().char,
     currentIndex: state.current,
     mode: state.mode,
@@ -2891,6 +2968,12 @@ function restoreProject(project, options = {}) {
     : "all";
   state.mode = ["toggle", "draw", "erase", "lock"].includes(settings.mode) ? settings.mode : "toggle";
   state.glyphs = project.glyphs.map((item) => normalizeGlyph(item));
+  state.kanjiMode = settings.kanjiMode === true || (state.folderFilter === "kanji" && state.glyphs.length > 0 && state.glyphs.every((glyph) => isHan(glyph.char)));
+  state.kanjiGradeFilter = normalizeKanjiGrade(settings.kanjiGradeFilter || "all");
+  if (state.kanjiMode) {
+    state.folderFilter = "kanji";
+    if (GRID_COLS !== 4 || GRID_ROWS !== 4) setGridSize(4, 4);
+  }
   const targetChar = options.currentChar || settings.currentChar;
   if (targetChar) {
     const sameCharIndex = state.glyphs.findIndex((glyph) => glyph.char === targetChar);
@@ -2899,6 +2982,7 @@ function restoreProject(project, options = {}) {
     const index = Number.isInteger(settings.currentIndex) ? settings.currentIndex : 0;
     state.current = clamp(index, 0, state.glyphs.length - 1);
   }
+  moveCurrentIntoVisibleKanjiGrade();
   if (Number.isFinite(Number(settings.duplicateThreshold))) {
     els.duplicateThreshold.value = clamp(Number(settings.duplicateThreshold), 70, 100);
     els.duplicateThresholdValue.value = `${els.duplicateThreshold.value}%`;
