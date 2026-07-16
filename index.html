@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>制約付きトレース型ロゴ文字エディタ</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="./app.js" defer></script>
@@ -58,11 +58,14 @@
           <div class="current-line">
             <span id="currentChar" class="current-char">A</span>
             <span id="currentWidthBadge" class="symbol-width-badge is-hidden"></span>
+            <button id="prevGlyph" class="icon-button glyph-nav-button" type="button" title="前の文字" aria-label="前の文字">‹</button>
             <select id="glyphSelect" class="glyph-select" aria-label="文字選択"></select>
+            <button id="nextGlyph" class="icon-button glyph-nav-button" type="button" title="次の文字" aria-label="次の文字">›</button>
             <button id="statusToggle" class="status-toggle" type="button" aria-pressed="false">未完成</button>
           </div>
         </div>
         <div class="toolbar">
+          <button id="kanjiMode" class="primary-button" type="button">漢字モード</button>
           <button id="autoTrace" class="primary-button" type="button">自動入力</button>
           <button id="undoButton" class="icon-button" type="button" title="Undo">↶</button>
           <button id="redoButton" class="icon-button" type="button" title="Redo">↷</button>
@@ -72,41 +75,44 @@
       <section class="canvas-stage" aria-label="編集キャンバス">
         <canvas id="editorCanvas"></canvas>
       </section>
-
-      <section class="sentence-panel" aria-label="文章プレビュー">
-        <div class="sentence-head">
-          <div>
-            <p class="eyebrow">Text Preview</p>
-            <h2>文章プレビュー</h2>
-          </div>
-          <div class="sentence-controls">
-            <label class="mini-range">
-              <span>サイズ</span>
-              <input id="previewSize" type="range" min="24" max="96" value="56">
-              <output id="previewSizeValue">56</output>
-            </label>
-            <label class="mini-range">
-              <span>字間</span>
-              <input id="previewTracking" type="range" min="-100" max="48" value="0">
-              <output id="previewTrackingValue">6</output>
-            </label>
-            <div class="preview-spacing-toggle segmented" role="group" aria-label="送り幅">
-              <button class="mode-button is-active" type="button" data-preview-spacing="mono">等幅</button>
-              <button class="mode-button" type="button" data-preview-spacing="proportional">詰め</button>
-            </div>
-            <label class="mini-range">
-              <span>太さ</span>
-              <input id="previewWeight" type="range" min="3" max="24" value="10">
-              <output id="previewWeightValue">10</output>
-            </label>
-          </div>
-        </div>
-        <textarea id="previewText" rows="8" spellcheck="false">ABCDE あいうえお</textarea>
-        <div id="sentencePreview" class="sentence-preview"></div>
-      </section>
     </main>
 
     <aside class="panel controls-panel">
+      <section class="section-block">
+        <div class="section-title">編集</div>
+        <div class="segmented" role="group" aria-label="編集モード">
+          <button class="mode-button is-active" type="button" data-mode="toggle">切替</button>
+          <button class="mode-button" type="button" data-mode="draw">追加</button>
+          <button class="mode-button" type="button" data-mode="erase">削除</button>
+          <button class="mode-button" type="button" data-mode="lock">確定</button>
+        </div>
+        <div class="button-grid">
+          <button id="alignLeft" class="ghost-button" type="button" title="左寄せ">←</button>
+          <button id="alignUp" class="ghost-button" type="button" title="上寄せ">↑</button>
+          <button id="alignDown" class="ghost-button" type="button" title="下寄せ">↓</button>
+          <button id="alignRight" class="ghost-button" type="button" title="右寄せ">→</button>
+          <button id="mirrorX" class="ghost-button" type="button">↔</button>
+          <button id="mirrorY" class="ghost-button" type="button">↕</button>
+          <button id="rotateCW" class="ghost-button" type="button">⟳</button>
+          <button id="clearGlyph" class="danger-button" type="button">消去</button>
+        </div>
+        <canvas id="previewCanvas" class="preview-canvas"></canvas>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title">漢字部品</div>
+        <label class="field-row">
+          <span>名前</span>
+          <select id="partNameSelect"></select>
+        </label>
+        <label id="partCustomNameRow" class="field-row">
+          <span>その他</span>
+          <input id="partNameInput" type="text" placeholder="任意の名前">
+        </label>
+        <button id="savePart" class="primary-button full-button" type="button">現在の文字を部品化</button>
+        <div id="partLibrary" class="part-library" aria-label="保存済み部品"></div>
+      </section>
+
       <section class="section-block">
         <div class="section-title">表示</div>
         <label class="check-row"><input id="showReference" type="checkbox" checked>下敷き</label>
@@ -220,41 +226,6 @@
       </section>
 
       <section class="section-block">
-        <div class="section-title">編集</div>
-        <div class="segmented" role="group" aria-label="編集モード">
-          <button class="mode-button is-active" type="button" data-mode="toggle">切替</button>
-          <button class="mode-button" type="button" data-mode="draw">追加</button>
-          <button class="mode-button" type="button" data-mode="erase">削除</button>
-          <button class="mode-button" type="button" data-mode="lock">確定</button>
-        </div>
-        <div class="button-grid">
-          <button id="alignLeft" class="ghost-button" type="button" title="左寄せ">←</button>
-          <button id="alignUp" class="ghost-button" type="button" title="上寄せ">↑</button>
-          <button id="alignDown" class="ghost-button" type="button" title="下寄せ">↓</button>
-          <button id="alignRight" class="ghost-button" type="button" title="右寄せ">→</button>
-          <button id="mirrorX" class="ghost-button" type="button">↔</button>
-          <button id="mirrorY" class="ghost-button" type="button">↕</button>
-          <button id="rotateCW" class="ghost-button" type="button">⟳</button>
-          <button id="clearGlyph" class="danger-button" type="button">消去</button>
-        </div>
-        <canvas id="previewCanvas" class="preview-canvas"></canvas>
-      </section>
-
-      <section class="section-block">
-        <div class="section-title">漢字部品</div>
-        <label class="field-row">
-          <span>名前</span>
-          <select id="partNameSelect"></select>
-        </label>
-        <label id="partCustomNameRow" class="field-row">
-          <span>その他</span>
-          <input id="partNameInput" type="text" placeholder="任意の名前">
-        </label>
-        <button id="savePart" class="primary-button full-button" type="button">現在の文字を部品化</button>
-        <div id="partLibrary" class="part-library" aria-label="保存済み部品"></div>
-      </section>
-
-      <section class="section-block">
         <div class="section-title">保存</div>
         <div class="button-row">
           <button id="saveJson" class="primary-button" type="button">JSON保存</button>
@@ -279,6 +250,38 @@
         </div>
         <div id="duplicateCompare" class="duplicate-compare"></div>
         <div id="duplicateResults" class="duplicate-results"></div>
+      </section>
+
+      <section class="sentence-panel" aria-label="文章プレビュー">
+        <div class="sentence-head">
+          <div>
+            <p class="eyebrow">Text Preview</p>
+            <h2>文章プレビュー</h2>
+          </div>
+          <div class="sentence-controls">
+            <label class="mini-range">
+              <span>サイズ</span>
+              <input id="previewSize" type="range" min="24" max="96" value="56">
+              <output id="previewSizeValue">56</output>
+            </label>
+            <label class="mini-range">
+              <span>字間</span>
+              <input id="previewTracking" type="range" min="-100" max="48" value="0">
+              <output id="previewTrackingValue">6</output>
+            </label>
+            <div class="preview-spacing-toggle segmented" role="group" aria-label="送り幅">
+              <button class="mode-button is-active" type="button" data-preview-spacing="mono">等幅</button>
+              <button class="mode-button" type="button" data-preview-spacing="proportional">詰め</button>
+            </div>
+            <label class="mini-range">
+              <span>太さ</span>
+              <input id="previewWeight" type="range" min="3" max="24" value="10">
+              <output id="previewWeightValue">10</output>
+            </label>
+          </div>
+        </div>
+        <textarea id="previewText" rows="8" spellcheck="false">ABCDE あいうえお</textarea>
+        <div id="sentencePreview" class="sentence-preview"></div>
       </section>
     </aside>
   </div>

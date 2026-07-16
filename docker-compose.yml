@@ -1,0 +1,11 @@
+services:
+  trace-logo-editor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trace_logo_editor
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

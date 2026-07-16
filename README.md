@@ -51,5 +51,17 @@ Use `trace-logo-editor` as the project root.
 CLI deploy:
 
 ```powershell
-npx wrangler pages deploy . --project-name trace-logo-editor
+npm.cmd run build:pages
+npx.cmd --yes wrangler@latest pages deploy dist --project-name trace-logo-editor --branch main
 ```
+
+## Always-on SBC deployment
+
+The production deployment runs independently on the Orange Pi SBC:
+
+- Docker container bound only to `127.0.0.1:8787`
+- Dedicated Cloudflare Quick Tunnel user service
+- Fixed public URL at `https://trace-logo-editor.pages.dev/`
+- Persistent project data in the repository's `data` directory on the SBC
+
+See [OPERATIONS.md](OPERATIONS.md) for deployment, status, and recovery commands.

@@ -10,5 +10,8 @@ recovered-*.json
 recovery-*.ldb
 recovery-leveldb-scan/
 
+dist/
+.wrangler/
+
 .agents/
 .codex/

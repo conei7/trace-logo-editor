@@ -4,4 +4,4 @@ compatibility_date = "2026-07-16"
 
 [[kv_namespaces]]
 binding = "TRACE_TUNNEL_CONFIG"
-id = "cc90c04a55944427bb8de0ce9e24d251"
+id = "replace-with-kv-namespace-id"

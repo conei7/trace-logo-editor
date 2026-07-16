@@ -7,6 +7,9 @@ const MAX_GRID_SIZE = 12;
 const DIGIT_CHARS = splitGraphemes("0123456789");
 const LATIN_CHARS = splitGraphemes("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
 const LATIN_UPPER_CHARS = splitGraphemes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+const HALF_SPACE_CHAR = " ";
+const FULL_SPACE_CHAR = "　";
+const WAVE_DASH_CHAR = "〜";
 const HIRAGANA_CHARS = splitGraphemes(
   "あいうえおかきくけこさしすせそたちつてとなにぬねの" +
   "はひふへほまみむめもやゐゆゑよらりるれろわをん" +
@@ -56,8 +59,11 @@ const ALL_TARGET_CHARS = uniqueChars([
   ...LATIN_CHARS,
   ...HIRAGANA_CHARS,
   ...KATAKANA_CHARS,
+  HALF_SPACE_CHAR,
   ...ASCII_SYMBOL_CHARS,
-  ...FULL_WIDTH_SYMBOL_CHARS
+  FULL_SPACE_CHAR,
+  ...FULL_WIDTH_SYMBOL_CHARS,
+  WAVE_DASH_CHAR
 ]);
 const FOLDER_FILTERS = [
   { id: "all", label: "全部" },
@@ -74,6 +80,7 @@ const FOLDER_FILTERS = [
 const STATUS = ["未完成", "完成"];
 const STORAGE_KEY = "trace-logo-editor:v1";
 const REMOTE_PROJECT_ENDPOINT = "/api/project";
+const REMOTE_PROJECT_PATCH_ENDPOINT = "/api/project/patch";
 const REMOTE_SAVE_DEBOUNCE_MS = 900;
 
 let GRID_COLS = DEFAULT_GRID_COLS;
@@ -84,6 +91,7 @@ let remoteSaveAvailable = false;
 let remoteSaveTimer = 0;
 let remoteSaveInFlight = false;
 let pendingRemoteSaveJson = "";
+let remoteProjectBaseline = null;
 
 const DEFAULT_TRANSFORM = {
   scale: 0.86,
@@ -172,7 +180,9 @@ const els = {
   charSetNote: document.getElementById("charSetNote"),
   currentChar: document.getElementById("currentChar"),
   currentWidthBadge: document.getElementById("currentWidthBadge"),
+  prevGlyph: document.getElementById("prevGlyph"),
   glyphSelect: document.getElementById("glyphSelect"),
+  nextGlyph: document.getElementById("nextGlyph"),
   statusToggle: document.getElementById("statusToggle"),
   canvas: document.getElementById("editorCanvas"),
   previewCanvas: document.getElementById("previewCanvas"),
@@ -185,6 +195,7 @@ const els = {
   previewWeight: document.getElementById("previewWeight"),
   previewWeightValue: document.getElementById("previewWeightValue"),
   previewSpacingButtons: document.querySelectorAll("[data-preview-spacing]"),
+  kanjiMode: document.getElementById("kanjiMode"),
   autoTrace: document.getElementById("autoTrace"),
   undoButton: document.getElementById("undoButton"),
   redoButton: document.getElementById("redoButton"),
@@ -327,6 +338,18 @@ function setGridSizeWithHistory(cols, rows) {
   renderAll();
 }
 
+function enterKanjiMode(chars = KANJI_GRADE_CHAR_SETS[1]) {
+  const targetChars = chars && chars.length ? chars : KANJI_GRADE_CHAR_SETS[1];
+  useCharSet(targetChars);
+  state.folderFilter = "kanji";
+  state.view.showReference = true;
+  setKanjiGrid(4);
+  els.charSetNote.textContent = "漢字モード: 4x4 / 斜めあり / 点なし";
+  syncAllControls();
+  renderAll();
+  persist();
+}
+
 function clampGridSize(value) {
   return clamp(Math.round(Number(value) || DEFAULT_GRID_COLS), MIN_GRID_SIZE, MAX_GRID_SIZE);
 }
@@ -407,6 +430,7 @@ function createGlyph(char) {
 }
 
 function bindEvents() {
+  suppressButtonDoubleTapZoom();
   window.addEventListener("resize", resizeCanvases);
   window.addEventListener("pagehide", flushRemoteSaveOnPageHide);
   populatePartNameSelect();
@@ -426,6 +450,8 @@ function bindEvents() {
     persist();
     renderAll();
   });
+  els.prevGlyph.addEventListener("click", () => goToRelativeGlyph(-1));
+  els.nextGlyph.addEventListener("click", () => goToRelativeGlyph(1));
 
   els.applyCharSet.addEventListener("click", () => applyCharSet(els.charSetInput.value));
   els.testSet.addEventListener("click", () => useCharSet(TEST_CHARS));
@@ -433,31 +459,33 @@ function bindEvents() {
   els.latinSet.addEventListener("click", () => useCharSet([...DIGIT_CHARS, ...LATIN_CHARS]));
   els.kanaSet.addEventListener("click", () => useCharSet(HIRAGANA_CHARS));
   els.kataSet.addEventListener("click", () => useCharSet(KATAKANA_CHARS));
-  els.symbolSet.addEventListener("click", () => useCharSet(uniqueChars([...ASCII_SYMBOL_CHARS, ...FULL_WIDTH_SYMBOL_CHARS])));
+  els.symbolSet.addEventListener("click", () => useCharSet(uniqueChars([
+    HALF_SPACE_CHAR,
+    ...ASCII_SYMBOL_CHARS,
+    FULL_SPACE_CHAR,
+    ...FULL_WIDTH_SYMBOL_CHARS,
+    WAVE_DASH_CHAR
+  ])));
   document.querySelectorAll("[data-symbol-width]").forEach((button) => {
     button.addEventListener("click", () => {
       if (button.dataset.symbolWidth === "half") {
-        useCharSet(ASCII_SYMBOL_CHARS);
+        useCharSet([HALF_SPACE_CHAR, ...ASCII_SYMBOL_CHARS]);
         setGridSizeWithHistory(2, 3);
       } else {
-        useCharSet(FULL_WIDTH_SYMBOL_CHARS);
+        useCharSet(uniqueChars([FULL_SPACE_CHAR, ...FULL_WIDTH_SYMBOL_CHARS, WAVE_DASH_CHAR]));
         setGridSizeWithHistory(3, 4);
       }
     });
   });
-  els.kanjiSet.addEventListener("click", () => {
-    useCharSet(KANJI_TEST_CHARS);
-    setKanjiGrid(6);
-  });
+  els.kanjiMode.addEventListener("click", enterKanjiMode);
+  els.kanjiSet.addEventListener("click", enterKanjiMode);
   document.querySelectorAll("[data-kanji-grade]").forEach((button) => {
     button.addEventListener("click", () => {
-      useCharSet(getKanjiGradeChars(button.dataset.kanjiGrade));
-      setKanjiGrid(6);
+      enterKanjiMode(getKanjiGradeChars(button.dataset.kanjiGrade));
     });
   });
   els.partSet.addEventListener("click", () => {
-    useCharSet(KANJI_PART_CHARS);
-    setKanjiGrid(6);
+    enterKanjiMode(KANJI_PART_CHARS);
   });
   els.completedSet.addEventListener("click", () => useCharSet(COMPLETED_CHARS));
   els.markCompleted.addEventListener("click", markCompletedGlyphs);
@@ -654,6 +682,37 @@ function bindViewCheckbox(element, key) {
   });
 }
 
+function suppressButtonDoubleTapZoom() {
+  let lastTouchAt = 0;
+  let suppressedButton = null;
+
+  document.addEventListener("touchstart", (event) => {
+    const button = event.target.closest("button");
+    if (!button || button.disabled) return;
+
+    const now = Date.now();
+    if (now - lastTouchAt < 360) {
+      event.preventDefault();
+      suppressedButton = button;
+    }
+    lastTouchAt = now;
+  }, { passive: false });
+
+  document.addEventListener("touchend", (event) => {
+    if (!suppressedButton) return;
+    event.preventDefault();
+    const button = suppressedButton;
+    suppressedButton = null;
+    button.click();
+  }, { passive: false });
+
+  document.addEventListener("dblclick", (event) => {
+    if (event.target.closest("button")) {
+      event.preventDefault();
+    }
+  }, { passive: false });
+}
+
 function syncBaselineControl() {
   const maxFromBottom = Math.max(1, GRID_ROWS - 1);
   els.baselineFromBottom.max = String(maxFromBottom);
@@ -685,13 +744,20 @@ function currentGlyph() {
   return state.glyphs[state.current] || state.glyphs[0];
 }
 
+function goToRelativeGlyph(delta) {
+  if (state.glyphs.length <= 1) return;
+  const nextIndex = (state.current + delta + state.glyphs.length) % state.glyphs.length;
+  focusGlyph(nextIndex);
+}
+
 function syncAllControls() {
   const glyph = currentGlyph();
-  els.currentChar.textContent = glyph.char;
+  els.currentChar.textContent = getGlyphDisplayChar(glyph.char);
   syncCurrentWidthBadge(glyph.char);
   renderGlyphSelect();
   syncStatusToggle();
   syncModeControls();
+  syncGlyphNavButtons();
   els.charSetInput.value = state.glyphs.map((item) => item.char).join("");
   els.glyphCount.textContent = String(state.glyphs.length);
 
@@ -797,7 +863,7 @@ function renderSentencePreview() {
   els.sentencePreview.style.setProperty("--preview-tracking", `${state.preview.tracking}px`);
   els.sentencePreview.style.setProperty("--preview-em-height", `${state.preview.size * previewMetrics.heightRatio}px`);
   els.sentencePreview.style.setProperty("--preview-space-half", `${state.preview.size * previewMetrics.cellRatio * 2}px`);
-  els.sentencePreview.style.setProperty("--preview-space-full", `${state.preview.size * previewMetrics.cellRatio * 4}px`);
+  els.sentencePreview.style.setProperty("--preview-space-full", `${state.preview.size * previewMetrics.cellRatio * 3}px`);
 
   const lines = text.split(/\r?\n/);
   for (const line of lines) {
@@ -926,7 +992,7 @@ function renderList() {
 
     const char = document.createElement("span");
     char.className = "char-glyph";
-    char.textContent = glyph.char;
+    char.textContent = getGlyphDisplayChar(glyph.char);
 
     const thumb = document.createElement("span");
     thumb.className = "thumb";
@@ -951,7 +1017,7 @@ function renderList() {
   els.glyphCount.textContent = state.folderFilter === "all"
     ? String(state.glyphs.length)
     : `${visibleGlyphs.length}/${state.glyphs.length}`;
-  els.currentChar.textContent = currentGlyph().char;
+  els.currentChar.textContent = getGlyphDisplayChar(currentGlyph().char);
   syncCurrentWidthBadge(currentGlyph().char);
   renderGlyphSelect();
   syncStatusToggle();
@@ -1007,11 +1073,19 @@ function renderGlyphSelect() {
     const option = document.createElement("option");
     const widthInfo = getSymbolWidthInfo(glyph.char);
     option.value = String(index);
-    option.textContent = widthInfo ? `${glyph.char}  ${widthInfo.label}  ${glyph.status}` : `${glyph.char}  ${glyph.status}`;
+    const label = getGlyphDisplayChar(glyph.char);
+    option.textContent = widthInfo ? `${label}  ${widthInfo.label}  ${glyph.status}` : `${label}  ${glyph.status}`;
     return option;
   });
   els.glyphSelect.replaceChildren(...options);
   els.glyphSelect.value = String(state.current);
+  syncGlyphNavButtons();
+}
+
+function syncGlyphNavButtons() {
+  const disabled = state.glyphs.length <= 1;
+  els.prevGlyph.disabled = disabled;
+  els.nextGlyph.disabled = disabled;
 }
 
 function syncCurrentWidthBadge(char) {
@@ -1026,9 +1100,17 @@ function syncCurrentWidthBadge(char) {
 }
 
 function getSymbolWidthInfo(char) {
+  if (char === HALF_SPACE_CHAR) return { id: "half", label: "半角" };
+  if (char === FULL_SPACE_CHAR || char === WAVE_DASH_CHAR) return { id: "full", label: "全角" };
   if (ASCII_SYMBOL_CHARS.includes(char)) return { id: "half", label: "半角" };
   if (FULL_WIDTH_SYMBOL_CHARS.includes(char)) return { id: "full", label: "全角" };
   return null;
+}
+
+function getGlyphDisplayChar(char) {
+  if (char === HALF_SPACE_CHAR) return "␠";
+  if (char === FULL_SPACE_CHAR) return "全空";
+  return char;
 }
 
 function canUsePoints(glyph) {
@@ -2226,7 +2308,13 @@ function classifyGlyphFolder(char) {
   if (LATIN_CHARS.includes(char)) return "latin";
   if (HIRAGANA_CHARS.includes(char)) return "hiragana";
   if (KATAKANA_CHARS.includes(char)) return "katakana";
-  if (ASCII_SYMBOL_CHARS.includes(char) || FULL_WIDTH_SYMBOL_CHARS.includes(char)) return "symbol";
+  if (
+    char === HALF_SPACE_CHAR ||
+    char === FULL_SPACE_CHAR ||
+    char === WAVE_DASH_CHAR ||
+    ASCII_SYMBOL_CHARS.includes(char) ||
+    FULL_WIDTH_SYMBOL_CHARS.includes(char)
+  ) return "symbol";
   if (isHan(char)) return "kanji";
   return "other";
 }
@@ -2929,6 +3017,7 @@ function persist() {
 async function loadInitialProject() {
   const localProject = readProjectFromStorage();
   const remoteProject = await loadRemoteProject();
+  remoteProjectBaseline = remoteProject;
   const project = chooseInitialProject(localProject, remoteProject);
   if (!project) return;
 
@@ -2998,14 +3087,24 @@ async function flushRemoteSave() {
   remoteSaveInFlight = true;
 
   try {
-    const response = await fetch(REMOTE_PROJECT_ENDPOINT, {
-      method: "PUT",
+    const project = JSON.parse(json);
+    const previousBaseline = remoteProjectBaseline;
+    const patch = previousBaseline ? buildRemoteProjectPatch(project, previousBaseline) : null;
+    if (patch && !hasRemotePatchChanges(patch)) return;
+    const response = await fetch(patch ? REMOTE_PROJECT_PATCH_ENDPOINT : REMOTE_PROJECT_ENDPOINT, {
+      method: patch ? "PATCH" : "PUT",
       headers: { "content-type": "application/json" },
-      body: json
+      body: patch ? JSON.stringify(patch) : json
     });
     remoteSaveAvailable = response.headers.get("x-trace-logo-api") === "1";
     if (!response.ok) {
       console.warn("Remote autosave failed", response.status);
+    } else {
+      const result = await response.json();
+      if (result.project) {
+        mergeRemoteProject(result.project, previousBaseline);
+        remoteProjectBaseline = result.project;
+      }
     }
   } catch (error) {
     console.warn("Remote autosave failed", error);
@@ -3020,9 +3119,138 @@ async function flushRemoteSave() {
 
 function flushRemoteSaveOnPageHide() {
   if (!remoteSaveAvailable || !pendingRemoteSaveJson || !navigator.sendBeacon) return;
-  const blob = new Blob([pendingRemoteSaveJson], { type: "application/json" });
-  navigator.sendBeacon(REMOTE_PROJECT_ENDPOINT, blob);
+  const project = JSON.parse(pendingRemoteSaveJson);
+  const patch = remoteProjectBaseline ? buildRemoteProjectPatch(project, remoteProjectBaseline) : null;
+  if (patch && !hasRemotePatchChanges(patch)) {
+    pendingRemoteSaveJson = "";
+    return;
+  }
+  const blob = new Blob([patch ? JSON.stringify(patch) : pendingRemoteSaveJson], { type: "application/json" });
+  navigator.sendBeacon(patch ? REMOTE_PROJECT_PATCH_ENDPOINT : REMOTE_PROJECT_ENDPOINT, blob);
   pendingRemoteSaveJson = "";
+}
+
+function buildRemoteProjectPatch(project, baseline) {
+  const baselineGlyphs = new Map((baseline.glyphs || []).map((glyph) => [glyph.char, glyph]));
+  const changedGlyphs = project.glyphs.filter((glyph) => {
+    const previous = baselineGlyphs.get(glyph.char);
+    return !previous || glyphSnapshot(glyph) !== glyphSnapshot(previous);
+  });
+  const sharedSettings = pickSharedSettings(project.settings || {});
+  const baselineSettings = pickSharedSettings(baseline.settings || baseline);
+  const patch = {
+    savedAt: project.savedAt,
+    glyphs: changedGlyphs,
+    settings: diffRemoteValue(sharedSettings, baselineSettings) || {}
+  };
+
+  for (const key of ["grid", "gridSize", "gridCols", "gridRows", "customFonts", "parts", "composition"]) {
+    if (JSON.stringify(project[key]) !== JSON.stringify(baseline[key])) {
+      patch[key] = project[key];
+    }
+  }
+  return patch;
+}
+
+function pickSharedSettings(settings) {
+  return {
+    view: settings.view,
+    reference: settings.reference,
+    preview: settings.preview,
+    duplicateThreshold: settings.duplicateThreshold
+  };
+}
+
+function hasRemotePatchChanges(patch) {
+  if (patch.glyphs.length > 0 || Object.keys(patch.settings || {}).length > 0) return true;
+  return ["grid", "gridSize", "gridCols", "gridRows", "customFonts", "parts", "composition"]
+    .some((key) => Object.hasOwn(patch, key));
+}
+
+function diffRemoteValue(value, baseline) {
+  if (JSON.stringify(value) === JSON.stringify(baseline)) return undefined;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const diff = {};
+  for (const [key, child] of Object.entries(value)) {
+    const childDiff = diffRemoteValue(child, baseline && baseline[key]);
+    if (childDiff !== undefined) diff[key] = childDiff;
+  }
+  return Object.keys(diff).length > 0 ? diff : undefined;
+}
+
+function glyphSnapshot(glyph) {
+  return JSON.stringify({
+    char: glyph.char,
+    activeEdges: glyph.activeEdges || [],
+    lockedEdges: glyph.lockedEdges || [],
+    activePoints: glyph.activePoints || [],
+    candidateScores: glyph.candidateScores || {},
+    autoSettings: glyph.autoSettings || {},
+    status: glyph.status
+  });
+}
+
+function mergeRemoteProject(remoteProject, previousBaseline) {
+  if (!previousBaseline || !Array.isArray(remoteProject.glyphs)) return;
+  const currentChar = currentGlyph().char;
+  const localProject = serializeProject();
+  const localGlyphs = new Map(localProject.glyphs.map((glyph) => [glyph.char, glyph]));
+  const baselineGlyphs = new Map((previousBaseline.glyphs || []).map((glyph) => [glyph.char, glyph]));
+  let changed = false;
+
+  for (const remoteGlyph of remoteProject.glyphs) {
+    const localGlyph = localGlyphs.get(remoteGlyph.char);
+    const baselineGlyph = baselineGlyphs.get(remoteGlyph.char);
+    const locallyChanged = localGlyph && (!baselineGlyph || glyphSnapshot(localGlyph) !== glyphSnapshot(baselineGlyph));
+    if (locallyChanged) continue;
+
+    const index = state.glyphs.findIndex((glyph) => glyph.char === remoteGlyph.char);
+    if (index < 0) {
+      state.glyphs.push(normalizeGlyph(remoteGlyph));
+      changed = true;
+    } else if (glyphSnapshot(localGlyph) !== glyphSnapshot(remoteGlyph)) {
+      state.glyphs[index] = normalizeGlyph(remoteGlyph);
+      changed = true;
+    }
+  }
+
+  const settingsChanged = mergeRemoteSharedSettings(remoteProject, previousBaseline, localProject);
+  const nextIndex = state.glyphs.findIndex((glyph) => glyph.char === currentChar);
+  if (nextIndex >= 0) state.current = nextIndex;
+  if (changed || settingsChanged) {
+    cacheProjectLocally();
+    syncAllControls();
+    renderAll();
+  }
+}
+
+function mergeRemoteSharedSettings(remoteProject, previousBaseline, localProject) {
+  const remote = pickSharedSettings(remoteProject.settings || remoteProject);
+  const baseline = pickSharedSettings(previousBaseline.settings || previousBaseline);
+  const local = pickSharedSettings(localProject.settings || localProject);
+  let changed = false;
+
+  if (JSON.stringify(local.view) === JSON.stringify(baseline.view) && JSON.stringify(remote.view) !== JSON.stringify(baseline.view)) {
+    state.view = { ...DEFAULT_VIEW, ...(remote.view || {}) };
+    changed = true;
+  }
+  if (JSON.stringify(local.reference) === JSON.stringify(baseline.reference) && JSON.stringify(remote.reference) !== JSON.stringify(baseline.reference)) {
+    state.reference = {
+      font: (remote.reference && remote.reference.font) || DEFAULT_REFERENCE.font,
+      transform: { ...DEFAULT_REFERENCE.transform, ...((remote.reference && remote.reference.transform) || {}) }
+    };
+    changed = true;
+  }
+  if (JSON.stringify(local.preview) === JSON.stringify(baseline.preview) && JSON.stringify(remote.preview) !== JSON.stringify(baseline.preview)) {
+    state.preview = { ...DEFAULT_PREVIEW, ...(remote.preview || {}) };
+    changed = true;
+  }
+  if (local.duplicateThreshold === baseline.duplicateThreshold && remote.duplicateThreshold !== baseline.duplicateThreshold) {
+    els.duplicateThreshold.value = clamp(Number(remote.duplicateThreshold) || 92, 70, 100);
+    els.duplicateThresholdValue.value = `${els.duplicateThreshold.value}%`;
+    changed = true;
+  }
+  return changed;
 }
 
 function clamp(value, min, max) {

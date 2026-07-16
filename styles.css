@@ -37,6 +37,7 @@ input,
 select,
 textarea {
   font: inherit;
+  touch-action: manipulation;
 }
 
 button {
@@ -503,6 +504,10 @@ textarea {
 }
 
 .topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   min-height: 78px;
   flex: 0 0 auto;
   padding: 14px;
@@ -619,8 +624,21 @@ select {
 
 .icon-button {
   width: 38px;
+  height: 38px;
+  min-height: 38px;
   padding: 0;
   font-size: 22px;
+  line-height: 1;
+}
+
+.glyph-nav-button {
+  flex: 0 0 38px;
+  align-self: stretch;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .full-button {
@@ -637,6 +655,7 @@ select {
   border-radius: 8px;
   background: #fffefa;
   box-shadow: var(--shadow);
+  touch-action: pan-y;
 }
 
 .sentence-panel {
@@ -648,6 +667,10 @@ select {
   border-radius: 8px;
   background: var(--panel);
   box-shadow: var(--shadow);
+}
+
+.controls-panel .sentence-panel {
+  box-shadow: none;
 }
 
 .sentence-head {
@@ -762,7 +785,7 @@ select {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  touch-action: none;
+  touch-action: pan-y;
 }
 
 .check-row,
@@ -903,6 +926,10 @@ input[type="checkbox"] {
     grid-template-columns: repeat(3, minmax(220px, 1fr));
     max-height: none;
   }
+
+  .controls-panel .sentence-panel {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-height: 700px) and (min-width: 761px) {
@@ -979,6 +1006,9 @@ input[type="checkbox"] {
     position: sticky;
     top: 8px;
     z-index: 4;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
     min-height: 0;
     padding: 10px;
     background: rgba(255, 254, 250, 0.96);
@@ -986,7 +1016,10 @@ input[type="checkbox"] {
   }
 
   .current-line {
+    display: grid;
+    grid-template-columns: 50px minmax(0, 1fr) 50px;
     gap: 8px;
+    align-items: stretch;
   }
 
   .current-char {
@@ -997,13 +1030,47 @@ input[type="checkbox"] {
 
   .glyph-select,
   .status-toggle {
-    flex: 1 1 120px;
     height: 42px;
+  }
+
+  .glyph-select {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .status-toggle {
+    grid-column: 1 / 4;
+    grid-row: 3;
+    width: 100%;
+  }
+
+  .glyph-nav-button,
+  .icon-button {
+    width: 50px;
+    height: 42px;
+    min-height: 42px;
+  }
+
+  #prevGlyph {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #nextGlyph {
+    grid-column: 3;
+    grid-row: 2;
   }
 
   .toolbar {
     display: grid;
-    grid-template-columns: 1fr 44px 44px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 50px 50px;
+    align-items: stretch;
+  }
+
+  .toolbar .icon-button {
+    width: 100%;
   }
 
   .primary-button,

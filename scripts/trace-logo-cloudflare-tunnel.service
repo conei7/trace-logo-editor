@@ -1,0 +1,14 @@
+[Unit]
+Description=Trace Logo Editor Cloudflare Quick Tunnel
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/trace-logo-editor
+ExecStart=/bin/sh %h/trace-logo-editor/scripts/run-cloudflare-quick-tunnel.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
