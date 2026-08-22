@@ -226,10 +226,21 @@
 
       <section class="section-block">
         <div class="section-title">保存</div>
+        <label class="field-row">
+          <span>フォント名</span>
+          <input id="fontExportName" type="text" value="Trace Logo" maxlength="48">
+        </label>
+        <label class="range-row">
+          <span>フォント太さ</span>
+          <input id="fontExportWeight" type="range" min="30" max="180" step="10" value="90">
+          <output id="fontExportWeightValue">90</output>
+        </label>
         <div class="button-row">
+          <button id="exportFont" class="primary-button" type="button">OTF書き出し</button>
           <button id="saveJson" class="primary-button" type="button">JSON保存</button>
           <button id="exportSvg" class="ghost-button" type="button">SVG</button>
         </div>
+        <p id="fontExportNote" class="note-line">完成済みの英数・かな・カナ・記号を収録</p>
         <label class="file-row compact-file">
           <span>JSON読込</span>
           <input id="loadJson" type="file" accept=".json,application/json">

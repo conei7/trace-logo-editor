@@ -12,6 +12,8 @@ recovery-leveldb-scan/
 
 dist/
 .wrangler/
+node_modules/
+trace-logo-test.otf
 
 .agents/
 .codex/

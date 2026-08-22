@@ -2,7 +2,10 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-COPY app.js index.html local-server.mjs styles.css ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY app.js font-export.mjs index.html local-server.mjs styles.css ./
 RUN mkdir -p /app/data && chown -R node:node /app
 
 USER node

@@ -3,6 +3,7 @@ import { copyFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildOpenTypeFont } from "./font-export.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)));
 const port = Number(process.argv[2] || process.env.PORT || 8787);
@@ -180,6 +181,36 @@ async function handleProjectPatchApi(request, response) {
   }
 }
 
+async function handleFontExportApi(request, response) {
+  if (request.method !== "POST") {
+    sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+  if (!existsSync(sharedProjectPath)) {
+    sendJson(response, 404, { error: "No saved project" });
+    return;
+  }
+
+  try {
+    const body = await readRequestBody(request);
+    const options = body ? JSON.parse(body) : {};
+    const project = JSON.parse(await readFile(sharedProjectPath, "utf8"));
+    const font = buildOpenTypeFont(project, options);
+    response.writeHead(200, {
+      "content-type": "font/otf",
+      "content-disposition": `attachment; filename="${font.filename}"`,
+      "content-length": font.buffer.length,
+      "cache-control": "no-store",
+      "x-trace-logo-api": "1",
+      "x-trace-font-family": encodeURIComponent(font.familyName),
+      "x-trace-font-glyphs": String(font.glyphCount)
+    });
+    response.end(font.buffer);
+  } catch (error) {
+    sendJson(response, 500, { error: error.message });
+  }
+}
+
 const server = createServer((request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
   const requestPath = decodeURIComponent(url.pathname);
@@ -201,6 +232,13 @@ const server = createServer((request, response) => {
 
   if (requestPath === "/api/project/patch") {
     handleProjectPatchApi(request, response).catch((error) => {
+      sendJson(response, 500, { error: error.message });
+    });
+    return;
+  }
+
+  if (requestPath === "/api/font") {
+    handleFontExportApi(request, response).catch((error) => {
       sendJson(response, 500, { error: error.message });
     });
     return;

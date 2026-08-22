@@ -79,6 +79,7 @@ const FOLDER_FILTERS = [
 ];
 const STATUS = ["未完成", "完成"];
 const STORAGE_KEY = "trace-logo-editor:v1";
+const FONT_EXPORT_STORAGE_KEY = "trace-logo-editor:font-export";
 const REMOTE_PROJECT_ENDPOINT = "/api/project";
 const REMOTE_PROJECT_PATCH_ENDPOINT = "/api/project/patch";
 const REMOTE_SAVE_DEBOUNCE_MS = 900;
@@ -255,6 +256,11 @@ const els = {
   clearGlyph: document.getElementById("clearGlyph"),
   saveJson: document.getElementById("saveJson"),
   exportSvg: document.getElementById("exportSvg"),
+  exportFont: document.getElementById("exportFont"),
+  fontExportName: document.getElementById("fontExportName"),
+  fontExportWeight: document.getElementById("fontExportWeight"),
+  fontExportWeightValue: document.getElementById("fontExportWeightValue"),
+  fontExportNote: document.getElementById("fontExportNote"),
   loadJson: document.getElementById("loadJson"),
   duplicateThreshold: document.getElementById("duplicateThreshold"),
   duplicateThresholdValue: document.getElementById("duplicateThresholdValue"),
@@ -271,6 +277,7 @@ init();
 
 async function init() {
   await loadInitialProject();
+  loadFontExportSettings();
   bindEvents();
   syncAllControls();
   resizeCanvases();
@@ -705,6 +712,12 @@ function bindEvents() {
 
   els.saveJson.addEventListener("click", saveProjectJson);
   els.exportSvg.addEventListener("click", exportCurrentSvg);
+  els.exportFont.addEventListener("click", exportFontOtf);
+  els.fontExportWeight.addEventListener("input", () => {
+    els.fontExportWeightValue.value = els.fontExportWeight.value;
+    saveFontExportSettings();
+  });
+  els.fontExportName.addEventListener("change", saveFontExportSettings);
   els.loadJson.addEventListener("change", loadProjectJson);
   els.duplicateThreshold.addEventListener("input", () => {
     els.duplicateThresholdValue.value = `${els.duplicateThreshold.value}%`;
@@ -2510,6 +2523,72 @@ function exportCurrentSvg() {
   downloadText(`glyph-${safeName}.svg`, svg, "image/svg+xml");
 }
 
+async function exportFontOtf() {
+  const familyName = els.fontExportName.value.trim() || "Trace Logo";
+  const strokeWidth = Number(els.fontExportWeight.value);
+  els.exportFont.disabled = true;
+  els.fontExportNote.textContent = "共有データを保存してフォントを生成中...";
+
+  try {
+    await flushRemoteSaveAndWait();
+    const response = await fetch("/api/font", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ familyName, strokeWidth })
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") || "";
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1] || "trace-logo.otf";
+    const glyphCount = response.headers.get("x-trace-font-glyphs") || "";
+    downloadBlob(filename, blob);
+    els.fontExportNote.textContent = `${glyphCount || "完成済み"}字形を収録した ${filename} を保存しました`;
+    saveFontExportSettings();
+  } catch (error) {
+    els.fontExportNote.textContent = `OTF生成エラー: ${error.message}`;
+  } finally {
+    els.exportFont.disabled = false;
+  }
+}
+
+async function flushRemoteSaveAndWait() {
+  persist();
+  window.clearTimeout(remoteSaveTimer);
+  const deadline = Date.now() + 6000;
+  while ((pendingRemoteSaveJson || remoteSaveInFlight) && Date.now() < deadline) {
+    if (!remoteSaveInFlight) await flushRemoteSave();
+    if (remoteSaveInFlight) await new Promise((resolve) => window.setTimeout(resolve, 60));
+  }
+}
+
+function loadFontExportSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FONT_EXPORT_STORAGE_KEY) || "null");
+    if (saved && typeof saved.familyName === "string") els.fontExportName.value = saved.familyName;
+    if (saved && Number.isFinite(Number(saved.strokeWidth))) {
+      els.fontExportWeight.value = clamp(Number(saved.strokeWidth), 30, 180);
+    }
+  } catch {
+    // Keep defaults when local settings are unavailable.
+  }
+  els.fontExportWeightValue.value = els.fontExportWeight.value;
+}
+
+function saveFontExportSettings() {
+  try {
+    localStorage.setItem(FONT_EXPORT_STORAGE_KEY, JSON.stringify({
+      familyName: els.fontExportName.value.trim() || "Trace Logo",
+      strokeWidth: Number(els.fontExportWeight.value)
+    }));
+  } catch {
+    // Export still works when local settings are unavailable.
+  }
+}
+
 function renderDuplicateResults() {
   const threshold = Number(els.duplicateThreshold.value) / 100;
   const matches = findSimilarGlyphs(threshold);
@@ -2882,6 +2961,10 @@ function getSvgViewBox(glyph, options) {
 
 function downloadText(filename, text, type) {
   const blob = new Blob([text], { type });
+  downloadBlob(filename, blob);
+}
+
+function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

@@ -5,5 +5,8 @@
   "type": "module",
   "scripts": {
     "build:pages": "node scripts/build-pages.mjs"
+  },
+  "dependencies": {
+    "opentype.js": "^1.3.4"
   }
 }
