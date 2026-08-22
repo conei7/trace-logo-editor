@@ -23,6 +23,7 @@ export function buildOpenTypeFont(project, options = {}) {
     addGlyph(glyphs, exportedChars, glyph.char, glyph, strokeWidth);
   }
 
+  addGlyphAlias(glyphs, exportedChars, "〜", "～", sourceGlyphs, strokeWidth);
   addSpaceGlyph(glyphs, exportedChars, " ", 2 * CELL);
   addSpaceGlyph(glyphs, exportedChars, "　", 3 * CELL);
   addComposedKanaGlyphs(glyphs, exportedChars, sourceGlyphs, strokeWidth);
@@ -70,6 +71,15 @@ function addSpaceGlyph(glyphs, exportedChars, char, advanceWidth) {
     path: new opentype.Path()
   }));
   exportedChars.add(char);
+}
+
+function addGlyphAlias(glyphs, exportedChars, char, sourceChar, sourceGlyphs, strokeWidth) {
+  if (exportedChars.has(char)) return;
+  const source = sourceGlyphs.get(sourceChar);
+  if (!source || source.status !== "完成" || !hasMarks(source)) return;
+  addGlyph(glyphs, exportedChars, char, source, strokeWidth, {
+    advanceWidth: getAdvanceWidth(sourceChar)
+  });
 }
 
 function addComposedKanaGlyphs(glyphs, exportedChars, sourceGlyphs, strokeWidth) {
