@@ -44,10 +44,10 @@ const KANJI_GRADE_CHAR_SETS = {
 };
 const KANJI_ELEMENTARY_CHARS = uniqueChars(Object.values(KANJI_GRADE_CHAR_SETS).flat());
 const KANJI_PART_NAME_GROUPS = [
-  { id: "left", label: "左偏", names: "亻 冫 氵 扌 忄 彳 犭 礻 衤 訁 阝 女 子 山 土 王 木 禾 米 糹 纟 金 釒 貝 車 馬 魚 虫 弓" },
-  { id: "right", label: "右旁", names: "刂 阝 卩 力 寸 攵 欠 頁 見 斤 殳 隹 鳥" },
-  { id: "top", label: "冠", names: "宀 冖 艹 ⺾ 竹 ⺮ 雨 穴 爫 癶 罒 ⺌ 小 髟" },
-  { id: "bottom", label: "脚", names: "灬 心 皿 貝 儿 廾 土 女 手 寸 日 月" },
+  { id: "left", label: "左偏", names: "亻 冫 氵 扌 忄 彳 犭 礻 衤 訁 阝 女 子 山 土 王 木 禾 米 糹 纟 金 釒 貝 車 馬 魚 虫 弓 口 日 月 火 牜 牛 田 目 石 矢 ⻊ 足 耳 舟 酉 飠 食 歹 片 巾 立 白 角 夕 方 舌 里" },
+  { id: "right", label: "右旁", names: "刂 阝 卩 力 寸 攵 欠 頁 見 斤 殳 隹 鳥 又" },
+  { id: "top", label: "冠", names: "宀 冖 艹 ⺾ 竹 ⺮ 雨 穴 爫 癶 罒 ⺌ 小 髟 亠 八 十 士 大 羽 羊 老 曰" },
+  { id: "bottom", label: "脚", names: "灬 心 皿 貝 儿 廾 土 女 手 寸" },
   { id: "frame", label: "構", names: "門 囗 匚 匸 冂 勹 气 行 弋 戈" },
   { id: "hang", label: "垂", names: "广 疒 厂 尸 戸 麻 虍 鹿" },
   { id: "wrap", label: "繞", names: "辶 ⻌ 廴 走 鬼 尢 兀" }
@@ -55,9 +55,9 @@ const KANJI_PART_NAME_GROUPS = [
 const KANJI_PART_CHARS = uniqueChars(KANJI_PART_NAME_GROUPS.flatMap((group) => group.names.split(/\s+/).filter(Boolean)));
 const RADICAL_PART_VARIANTS = {
   9: "亻", 10: "兀", 18: "刂", 42: "⺌", 61: "忄", 63: "戸", 64: "扌",
-  66: "攵", 85: "氵", 86: "灬", 87: "爫", 94: "犭", 96: "王", 113: "礻",
+  66: "攵", 85: "氵", 86: "灬", 87: "爫", 93: "牜", 94: "犭", 96: "王", 113: "礻",
   118: "⺮", 120: "糹 纟", 122: "罒", 130: "月", 140: "艹 ⺾", 145: "衤",
-  149: "訁", 162: "辶 ⻌", 163: "阝", 167: "釒", 170: "阝"
+  149: "訁", 157: "⻊", 162: "辶 ⻌", 163: "阝", 167: "釒", 170: "阝", 184: "飠"
 };
 const KANA_CHARS = uniqueChars([...HIRAGANA_CHARS, ...KATAKANA_CHARS]);
 const ALL_TARGET_CHARS = uniqueChars([
