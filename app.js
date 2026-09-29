@@ -44,7 +44,7 @@ const KANJI_GRADE_CHAR_SETS = {
 };
 const KANJI_ELEMENTARY_CHARS = uniqueChars(Object.values(KANJI_GRADE_CHAR_SETS).flat());
 const KANJI_PART_NAME_GROUPS = [
-  { id: "left", label: "左偏", names: "亻 冫 氵 扌 忄 彳 犭 礻 衤 訁 阝 女 子 山 土 王 木 禾 米 糹 纟 金 釒 貝 車 馬 魚 虫" },
+  { id: "left", label: "左偏", names: "亻 冫 氵 扌 忄 彳 犭 礻 衤 訁 阝 女 子 山 土 王 木 禾 米 糹 纟 金 釒 貝 車 馬 魚 虫 弓" },
   { id: "right", label: "右旁", names: "刂 阝 卩 力 寸 攵 欠 頁 見 斤 殳 隹 鳥" },
   { id: "top", label: "冠", names: "宀 冖 艹 ⺾ 竹 ⺮ 雨 穴 爫 癶 罒 ⺌ 小 髟" },
   { id: "bottom", label: "脚", names: "灬 心 皿 貝 儿 廾 土 女 手 寸 日 月" },
