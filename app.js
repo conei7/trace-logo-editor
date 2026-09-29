@@ -53,6 +53,12 @@ const KANJI_PART_NAME_GROUPS = [
   { id: "wrap", label: "繞", names: "辶 ⻌ 廴 走 鬼 尢 兀" }
 ];
 const KANJI_PART_CHARS = uniqueChars(KANJI_PART_NAME_GROUPS.flatMap((group) => group.names.split(/\s+/).filter(Boolean)));
+const RADICAL_PART_VARIANTS = {
+  9: "亻", 10: "兀", 18: "刂", 42: "⺌", 61: "忄", 63: "戸", 64: "扌",
+  66: "攵", 85: "氵", 86: "灬", 87: "爫", 94: "犭", 96: "王", 113: "礻",
+  118: "⺮", 120: "糹 纟", 122: "罒", 130: "月", 140: "艹 ⺾", 145: "衤",
+  149: "訁", 162: "辶 ⻌", 163: "阝", 167: "釒", 170: "阝"
+};
 const KANA_CHARS = uniqueChars([...HIRAGANA_CHARS, ...KATAKANA_CHARS]);
 const ALL_TARGET_CHARS = uniqueChars([
   ...DIGIT_CHARS,
@@ -152,8 +158,8 @@ const state = {
     transform: { ...DEFAULT_REFERENCE.transform }
   },
   view: { ...DEFAULT_VIEW },
-  undoStack: [],
-  redoStack: [],
+  undoStack: new Map(),
+  redoStack: new Map(),
   historyStart: null,
   duplicateExactChars: new Set(),
   drawing: false,
@@ -200,12 +206,11 @@ const els = {
   previewWeightValue: document.getElementById("previewWeightValue"),
   previewSpacingButtons: document.querySelectorAll("[data-preview-spacing]"),
   kanjiMode: document.getElementById("kanjiMode"),
-  autoTrace: document.getElementById("autoTrace"),
+  insertRadical: document.getElementById("insertRadical"),
   undoButton: document.getElementById("undoButton"),
   redoButton: document.getElementById("redoButton"),
   showReference: document.getElementById("showReference"),
   showGrid: document.getElementById("showGrid"),
-  showConfidence: document.getElementById("showConfidence"),
   showPreview: document.getElementById("showPreview"),
   showBaseline: document.getElementById("showBaseline"),
   baselineFromBottom: document.getElementById("baselineFromBottom"),
@@ -223,6 +228,8 @@ const els = {
   partNameInput: document.getElementById("partNameInput"),
   partCustomNameRow: document.getElementById("partCustomNameRow"),
   savePart: document.getElementById("savePart"),
+  partCount: document.getElementById("partCount"),
+  radicalMatchNote: document.getElementById("radicalMatchNote"),
   partLibrary: document.getElementById("partLibrary"),
   fontSelect: document.getElementById("fontSelect"),
   fontUpload: document.getElementById("fontUpload"),
@@ -234,18 +241,6 @@ const els = {
   refOffsetYValue: document.getElementById("refOffsetYValue"),
   refWeight: document.getElementById("refWeight"),
   refWeightValue: document.getElementById("refWeightValue"),
-  autoSensitivity: document.getElementById("autoSensitivity"),
-  autoSensitivityValue: document.getElementById("autoSensitivityValue"),
-  autoDensity: document.getElementById("autoDensity"),
-  autoDensityValue: document.getElementById("autoDensityValue"),
-  autoProbe: document.getElementById("autoProbe"),
-  autoProbeValue: document.getElementById("autoProbeValue"),
-  autoBias: document.getElementById("autoBias"),
-  autoBiasValue: document.getElementById("autoBiasValue"),
-  autoConnect: document.getElementById("autoConnect"),
-  autoConnectValue: document.getElementById("autoConnectValue"),
-  autoSimplify: document.getElementById("autoSimplify"),
-  autoSimplifyValue: document.getElementById("autoSimplifyValue"),
   alignLeft: document.getElementById("alignLeft"),
   alignUp: document.getElementById("alignUp"),
   alignDown: document.getElementById("alignDown"),
@@ -332,21 +327,20 @@ function setGridSize(nextCols, nextRows, options = {}) {
       }
     }
   }
+  clearGlyphHistory();
 }
 
 function setKanjiGrid(size) {
   if (Number(size) !== 4) return;
-  withHistory(() => {
-    setGridSize(4, 4);
-  });
+  setGridSize(4, 4);
+  persist();
   syncAllControls();
   renderAll();
 }
 
 function setGridSizeWithHistory(cols, rows) {
-  withHistory(() => {
-    setGridSize(cols, rows);
-  });
+  setGridSize(cols, rows);
+  persist();
   syncAllControls();
   renderAll();
 }
@@ -551,17 +545,13 @@ function bindEvents() {
     renderAll();
   });
 
-  els.autoTrace.addEventListener("click", () => {
-    withHistory(() => runAutoTrace(currentGlyph()));
-    renderAll();
-  });
+  els.insertRadical.addEventListener("click", insertCurrentRadical);
 
   els.undoButton.addEventListener("click", undo);
   els.redoButton.addEventListener("click", redo);
 
   bindViewCheckbox(els.showReference, "showReference");
   bindViewCheckbox(els.showGrid, "showGrid");
-  bindViewCheckbox(els.showConfidence, "showConfidence");
   bindViewCheckbox(els.showPreview, "showPreview");
   bindViewCheckbox(els.showBaseline, "showBaseline");
 
@@ -591,9 +581,8 @@ function bindEvents() {
       syncAllControls();
       return;
     }
-    withHistory(() => {
-      setGridSize(els.gridCols.value, GRID_ROWS);
-    });
+    setGridSize(els.gridCols.value, GRID_ROWS);
+    persist();
     syncAllControls();
     renderAll();
   });
@@ -603,9 +592,8 @@ function bindEvents() {
       syncAllControls();
       return;
     }
-    withHistory(() => {
-      setGridSize(GRID_COLS, els.gridRows.value);
-    });
+    setGridSize(GRID_COLS, els.gridRows.value);
+    persist();
     syncAllControls();
     renderAll();
   });
@@ -661,9 +649,7 @@ function bindEvents() {
   });
 
   els.fontSelect.addEventListener("change", () => {
-    withHistory(() => {
-      state.reference.font = els.fontSelect.value;
-    });
+    state.reference.font = els.fontSelect.value;
     persist();
     document.fonts.ready.then(renderAll);
     renderAll();
@@ -675,13 +661,6 @@ function bindEvents() {
   bindTransformRange(els.refOffsetX, els.refOffsetXValue, "offsetX", (value) => Number(value) / 100, (value) => value);
   bindTransformRange(els.refOffsetY, els.refOffsetYValue, "offsetY", (value) => Number(value) / 100, (value) => value);
   bindTransformRange(els.refWeight, els.refWeightValue, "weight", (value) => Number(value), (value) => value);
-
-  bindAutoRange(els.autoSensitivity, els.autoSensitivityValue, "sensitivity");
-  bindAutoRange(els.autoDensity, els.autoDensityValue, "density");
-  bindAutoRange(els.autoProbe, els.autoProbeValue, "probe");
-  bindAutoRange(els.autoBias, els.autoBiasValue, "bias");
-  bindAutoRange(els.autoConnect, els.autoConnectValue, "connect");
-  bindAutoRange(els.autoSimplify, els.autoSimplifyValue, "simplify");
 
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -796,15 +775,6 @@ function bindTransformRange(input, output, key, parse, format) {
   });
 }
 
-function bindAutoRange(input, output, key) {
-  input.addEventListener("input", () => {
-    output.value = input.value;
-    currentGlyph().autoSettings[key] = Number(input.value);
-    renderAll();
-    persist();
-  });
-}
-
 function currentGlyph() {
   return state.glyphs[state.current] || state.glyphs[0];
 }
@@ -839,21 +809,8 @@ function syncAllControls() {
   els.refWeight.value = state.reference.transform.weight;
   els.refWeightValue.value = state.reference.transform.weight;
 
-  for (const [key, inputId, outputId] of [
-    ["sensitivity", "autoSensitivity", "autoSensitivityValue"],
-    ["density", "autoDensity", "autoDensityValue"],
-    ["probe", "autoProbe", "autoProbeValue"],
-    ["bias", "autoBias", "autoBiasValue"],
-    ["connect", "autoConnect", "autoConnectValue"],
-    ["simplify", "autoSimplify", "autoSimplifyValue"]
-  ]) {
-    els[inputId].value = glyph.autoSettings[key];
-    els[outputId].value = glyph.autoSettings[key];
-  }
-
   els.showReference.checked = state.view.showReference;
   els.showGrid.checked = state.view.showGrid;
-  els.showConfidence.checked = state.view.showConfidence;
   els.showPreview.checked = state.view.showPreview;
   els.showBaseline.checked = state.view.showBaseline;
   syncBaselineControl();
@@ -874,6 +831,8 @@ function syncAllControls() {
   els.previewWeight.value = state.preview.weight;
   els.previewWeightValue.value = state.preview.weight;
   syncPreviewSpacingButtons();
+  syncGlyphHistoryButtons();
+  syncRadicalMatch();
 }
 
 function syncGridControls() {
@@ -1257,10 +1216,6 @@ function renderEditor() {
     drawBaselineGuide(ctx, layout);
   }
 
-  if (state.view.showConfidence) {
-    drawConfidence(ctx, glyph, layout);
-  }
-
   drawActiveEdges(ctx, glyph, layout);
   drawActivePoints(ctx, glyph, layout);
   drawIntersections(ctx, layout);
@@ -1405,22 +1360,6 @@ function shouldShowBaseline(glyph) {
 
 function getBaselineY() {
   return clamp(GRID_ROWS - state.view.baselineFromBottom, 1, GRID_ROWS);
-}
-
-function drawConfidence(context, glyph, layout) {
-  context.save();
-  context.lineCap = "square";
-  for (const edge of EDGES) {
-    const score = glyph.candidateScores[edge.id] || 0;
-    if (score <= 0.025 || glyph.lockedEdges.has(edge.id)) continue;
-    const active = glyph.activeEdges.has(edge.id);
-    const alpha = Math.min(0.68, 0.08 + score * 1.28);
-    context.globalAlpha = active ? Math.max(alpha, 0.42) : alpha;
-    context.strokeStyle = active ? "#0f766e" : "#c77816";
-    context.lineWidth = active ? Math.max(7, layout.cell * 0.12) : Math.max(4, layout.cell * 0.07);
-    strokeEdge(context, edge, layout);
-  }
-  context.restore();
 }
 
 function drawActiveEdges(context, glyph, layout, options = {}) {
@@ -1746,171 +1685,6 @@ function markManual(glyph) {
   glyph.status = normalizeStatus(glyph.status);
 }
 
-function runAutoTrace(glyph) {
-  const scores = scoreEdges(glyph);
-  glyph.candidateScores = scores;
-
-  const settings = glyph.autoSettings;
-  const sensitivity = settings.sensitivity / 100;
-  const density = settings.density / 100;
-  const simplify = settings.simplify / 100;
-  const threshold = clamp(0.34 - sensitivity * 0.24 - (density - 0.5) * 0.1, 0.045, 0.42);
-  const limitRatio = 0.18 + density * 0.52 - simplify * 0.32;
-  const candidateEdges = getTraceCandidateEdges(glyph);
-  const limit = clamp(Math.round(candidateEdges.length * limitRatio), Math.min(4, candidateEdges.length), candidateEdges.length);
-
-  const sorted = candidateEdges
-    .map((edge) => ({ edge, score: scores[edge.id] || 0 }))
-    .sort((a, b) => b.score - a.score);
-
-  const selected = new Set(glyph.lockedEdges);
-  for (const item of sorted) {
-    if (selected.size >= limit) break;
-    if (item.score >= threshold) selected.add(item.edge.id);
-  }
-
-  if (settings.connect > 0) {
-    addConnectingEdges(selected, sorted, scores, threshold, settings);
-  }
-
-  for (const id of glyph.lockedEdges) selected.add(id);
-  glyph.activeEdges = selected;
-
-  glyph.status = normalizeStatus(glyph.status);
-}
-
-function scoreEdges(glyph) {
-  const size = 720;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const maskCtx = canvas.getContext("2d", { willReadFrequently: true });
-  const layout = getLayout(size, size, 0.04, 0);
-  drawMask(maskCtx, glyph, size, layout);
-  const image = maskCtx.getImageData(0, 0, size, size);
-  const scores = {};
-  const settings = glyph.autoSettings;
-  const radius = Math.max(2, Math.round(layout.cell * (settings.probe / 100)));
-  const hFactor = 1 + Math.max(0, -settings.bias) / 100 - Math.max(0, settings.bias) / 150;
-  const vFactor = 1 + Math.max(0, settings.bias) / 100 - Math.max(0, -settings.bias) / 150;
-
-  for (const edge of getTraceCandidateEdges(glyph)) {
-    const raw = sampleEdge(image.data, size, edge, radius, layout);
-    const factor = edge.type === "h" ? hFactor : edge.type === "v" ? vFactor : (hFactor + vFactor) / 2;
-    scores[edge.id] = clamp(raw * factor, 0, 1);
-  }
-
-  return scores;
-}
-
-function getTraceCandidateEdges(glyph) {
-  if (canUseDiagonalEdges(glyph)) return EDGES;
-  return EDGES.filter((edge) => !isDiagonalEdge(edge));
-}
-
-function drawMask(context, glyph, size, layout) {
-  drawMaskChar(context, glyph.char, size, layout, state.reference.transform, state.reference.font);
-}
-
-function drawMaskChar(context, char, size, layout, transform, fontFamily) {
-  const tr = transform;
-  context.clearRect(0, 0, size, size);
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, size, size);
-  context.fillStyle = "#000000";
-  context.strokeStyle = "#000000";
-  context.lineJoin = "round";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  const fontSize = Math.min(layout.gridWidth || layout.size, layout.gridHeight || layout.size) * tr.scale;
-  context.font = `800 ${fontSize}px ${fontFamily}`;
-  const cell = layout.cell;
-  const x = layout.left + (layout.gridWidth || layout.size) / 2 + tr.offsetX * cell;
-  const y = layout.top + (layout.gridHeight || layout.size) / 2 + tr.offsetY * cell;
-  if (tr.weight > 0) {
-    context.lineWidth = tr.weight * (size / 620);
-    context.strokeText(char, x, y);
-  }
-  context.fillText(char, x, y);
-}
-
-function sampleEdge(data, size, edge, radius, layout) {
-  const a = pointToCanvas(layout, edge.x1, edge.y1);
-  const b = pointToCanvas(layout, edge.x2, edge.y2);
-  const x1 = a.x;
-  const y1 = a.y;
-  const x2 = b.x;
-  const y2 = b.y;
-  const steps = 56;
-  const offsetStep = 2;
-  let weightedInk = 0;
-  let totalWeight = 0;
-
-  for (let i = 0; i <= steps; i += 1) {
-    const t = i / steps;
-    const x = x1 + (x2 - x1) * t;
-    const y = y1 + (y2 - y1) * t;
-    for (let offset = -radius; offset <= radius; offset += offsetStep) {
-      const normal = getSampleNormal(edge);
-      const sx = x + normal.x * offset;
-      const sy = y + normal.y * offset;
-      if (sx < 0 || sx >= size || sy < 0 || sy >= size) continue;
-      const weight = 1 - Math.abs(offset) / (radius + 1);
-      const ix = clamp(Math.round(sx), 0, size - 1);
-      const iy = clamp(Math.round(sy), 0, size - 1);
-      const index = (iy * size + ix) * 4;
-      const r = data[index];
-      const g = data[index + 1];
-      const b = data[index + 2];
-      const ink = 1 - (r + g + b) / 765;
-      weightedInk += ink * weight;
-      totalWeight += weight;
-    }
-  }
-
-  return totalWeight > 0 ? weightedInk / totalWeight : 0;
-}
-
-function getSampleNormal(edge) {
-  if (edge.type === "h") return { x: 0, y: 1 };
-  if (edge.type === "v") return { x: 1, y: 0 };
-  const dx = edge.x2 - edge.x1;
-  const dy = edge.y2 - edge.y1;
-  const length = Math.hypot(dx, dy) || 1;
-  return { x: -dy / length, y: dx / length };
-}
-
-function addConnectingEdges(selected, sorted, scores, threshold, settings) {
-  const extraLimit = Math.round(settings.connect / 8);
-  const bridgeThreshold = threshold * (0.9 - settings.connect * 0.0035);
-  let added = 0;
-
-  for (const item of sorted) {
-    if (added >= extraLimit) break;
-    if (selected.has(item.edge.id) || item.score < bridgeThreshold) continue;
-    const a = `${item.edge.x1},${item.edge.y1}`;
-    const b = `${item.edge.x2},${item.edge.y2}`;
-    const degreeA = endpointDegree(selected, a);
-    const degreeB = endpointDegree(selected, b);
-    if (degreeA > 0 && degreeB > 0) {
-      selected.add(item.edge.id);
-      added += 1;
-    }
-  }
-}
-
-function endpointDegree(edgeIds, pointKey) {
-  let degree = 0;
-  for (const id of edgeIds) {
-    const edge = EDGE_BY_ID.get(id);
-    if (!edge) continue;
-    if (`${edge.x1},${edge.y1}` === pointKey || `${edge.x2},${edge.y2}` === pointKey) {
-      degree += 1;
-    }
-  }
-  return degree;
-}
-
 function transformCurrentEdges(mapper) {
   withHistory(() => {
     const glyph = currentGlyph();
@@ -1953,6 +1727,7 @@ function rotateCurrentClockwise() {
     markManual(glyph);
   });
 
+  persist();
   syncAllControls();
   renderAll();
 }
@@ -2015,6 +1790,8 @@ function getSelectedPartName(fallback) {
 
 function renderPartLibrary() {
   const fragment = document.createDocumentFragment();
+  const scrollTop = els.partLibrary.scrollTop;
+  els.partCount.textContent = `(${state.parts.length})`;
 
   if (state.parts.length === 0) {
     const note = document.createElement("p");
@@ -2022,6 +1799,7 @@ function renderPartLibrary() {
     note.textContent = "保存済み部品はありません";
     fragment.append(note);
     els.partLibrary.replaceChildren(fragment);
+    els.partLibrary.scrollTop = scrollTop;
     return;
   }
 
@@ -2055,6 +1833,43 @@ function renderPartLibrary() {
   }
 
   els.partLibrary.replaceChildren(fragment);
+  els.partLibrary.scrollTop = scrollTop;
+}
+
+function getRadicalNames(char) {
+  const numbers = KANJI_RADICAL_NUMBERS[char] || [];
+  return uniqueChars(numbers.flatMap((number) => [
+    ...(RADICAL_PART_VARIANTS[number] || "").split(/\s+/).filter(Boolean),
+    ...(KANGXI_RADICAL_NAMES[number] || [])
+  ]));
+}
+
+function findRegisteredRadicalPart(char) {
+  for (const name of getRadicalNames(char)) {
+    for (let index = state.parts.length - 1; index >= 0; index -= 1) {
+      const part = state.parts[index];
+      if (part.name === name && part.gridCols === GRID_COLS && part.gridRows === GRID_ROWS && part.activeEdges.length > 0) {
+        return part;
+      }
+    }
+  }
+  return null;
+}
+
+function syncRadicalMatch() {
+  const char = currentGlyph().char;
+  const names = getRadicalNames(char).filter((name) => !/[\u2f00-\u2fd5]/u.test(name));
+  const part = findRegisteredRadicalPart(char);
+  els.insertRadical.disabled = !part;
+  els.insertRadical.title = part ? `${part.name}をそのまま貼る` : "登録済みの部首がありません";
+  els.radicalMatchNote.textContent = !isHan(char) ? "" : part
+    ? `部首: ${part.name}（登録済み）`
+    : names.length ? `部首候補: ${names.join(" / ")}（未登録）` : "部首情報なし";
+}
+
+function insertCurrentRadical() {
+  const part = findRegisteredRadicalPart(currentGlyph().char);
+  if (part) pastePart(part.id);
 }
 
 function createPartActionButton(partId, action, label) {
@@ -2090,6 +1905,7 @@ function saveCurrentAsPart() {
   els.partNameInput.value = "";
   persist();
   renderPartLibrary();
+  syncRadicalMatch();
 }
 
 function pastePart(partId) {
@@ -2113,6 +1929,7 @@ function deletePart(partId) {
   state.parts = state.parts.filter((part) => part.id !== partId);
   persist();
   renderPartLibrary();
+  syncRadicalMatch();
 }
 
 function remapPartEdgesExact(edgeIds, part) {
@@ -2299,11 +2116,9 @@ async function loadUploadedFont() {
   try {
     await registerCustomFont({ family, name, source });
     els.fontSelect.value = family;
-    withHistory(() => {
-      state.customFonts = state.customFonts.filter((font) => font.family !== family);
-      state.customFonts.push({ family, name, source });
-      state.reference.font = family;
-    });
+    state.customFonts = state.customFonts.filter((font) => font.family !== family);
+    state.customFonts.push({ family, name, source });
+    state.reference.font = family;
     persist();
     renderAll();
   } catch (error) {
@@ -2347,17 +2162,22 @@ function applyCharSet(text) {
   state.kanjiMode = parsed.chars.length > 0 && parsed.chars.every(isHan);
   if (!state.kanjiMode) state.kanjiGradeFilter = "all";
 
-  withHistory(() => {
-    const existing = new Map(state.glyphs.map((glyph) => [glyph.char, glyph]));
-    const remoteExisting = new Map((remoteProjectBaseline?.glyphs || []).map((glyph) => [glyph.char, glyph]));
-    state.glyphs = parsed.chars.map((char) => {
-      const localGlyph = existing.get(char);
-      if (localGlyph) return localGlyph;
-      const remoteGlyph = remoteExisting.get(char);
-      return remoteGlyph ? normalizeGlyph(remoteGlyph) : createGlyph(char);
-    });
-    state.current = Math.min(state.current, state.glyphs.length - 1);
+  const existing = new Map(state.glyphs.map((glyph) => [glyph.char, glyph]));
+  const remoteExisting = new Map((remoteProjectBaseline?.glyphs || []).map((glyph) => [glyph.char, glyph]));
+  state.glyphs = parsed.chars.map((char) => {
+    const localGlyph = existing.get(char);
+    if (localGlyph) return localGlyph;
+    const remoteGlyph = remoteExisting.get(char);
+    return remoteGlyph ? normalizeGlyph(remoteGlyph) : createGlyph(char);
   });
+  state.current = Math.min(state.current, state.glyphs.length - 1);
+  for (const char of [...state.undoStack.keys()]) {
+    if (!existing.has(char) || !parsed.chars.includes(char)) state.undoStack.delete(char);
+  }
+  for (const char of [...state.redoStack.keys()]) {
+    if (!existing.has(char) || !parsed.chars.includes(char)) state.redoStack.delete(char);
+  }
+  persist();
 
   els.charSetInput.value = state.glyphs.map((glyph) => glyph.char).join("");
   const rejected = parsed.rejected.length > 0 ? ` / 除外: ${parsed.rejected.join("")}` : "";
@@ -2381,16 +2201,17 @@ function markCompletedGlyphs() {
   const completed = new Set(COMPLETED_CHARS);
   let marked = 0;
 
-  withHistory(() => {
-    for (const glyph of state.glyphs) {
-      if (completed.has(glyph.char)) {
-        glyph.status = "完成";
-        marked += 1;
-      }
+  for (const glyph of state.glyphs) {
+    if (completed.has(glyph.char)) {
+      glyph.status = "完成";
+      marked += 1;
     }
-  });
+  }
+  clearGlyphHistory();
+  persist();
 
   els.charSetNote.textContent = `${marked}文字を完成にしました`;
+  syncStatusToggle();
   renderAll();
 }
 
@@ -2503,8 +2324,7 @@ function loadProjectJson() {
     try {
       const project = JSON.parse(String(reader.result));
       restoreProject(project);
-      state.undoStack = [];
-      state.redoStack = [];
+      clearGlyphHistory();
       syncAllControls();
       renderAll();
       persist();
@@ -2751,7 +2571,7 @@ function nudgeGlyphByIndex(index, dx, dy) {
     glyph.lockedEdges = shiftEdgeSet(glyph.lockedEdges, dx, dy);
     glyph.activePoints = shiftPointSet(glyph.activePoints || new Set(), dx, dy);
     glyph.candidateScores = {};
-  });
+  }, glyph);
 
   state.current = index;
   syncAllControls();
@@ -3041,6 +2861,7 @@ function restoreProject(project, options = {}) {
   if (project.glyphs.length === 0) {
     throw new Error("glyphs が空です");
   }
+  clearGlyphHistory();
   const incomingCols = project.grid && project.grid.cols ? project.grid.cols : project.gridCols || project.gridSize;
   const incomingRows = project.grid && project.grid.rows ? project.grid.rows : project.gridRows || project.gridSize;
   setGridSize(incomingCols || DEFAULT_GRID_COLS, incomingRows || DEFAULT_GRID_ROWS, { remap: false });
@@ -3143,48 +2964,91 @@ function normalizeStatus(status) {
   return "未完成";
 }
 
-function beginHistory() {
-  if (state.historyStart === null) {
-    state.historyStart = JSON.stringify(serializeProject());
+function glyphHistorySnapshot(glyph) {
+  return JSON.stringify({
+    activeEdges: [...glyph.activeEdges],
+    lockedEdges: [...glyph.lockedEdges],
+    activePoints: [...(glyph.activePoints || [])],
+    candidateScores: glyph.candidateScores,
+    status: glyph.status
+  });
+}
+
+function applyGlyphHistorySnapshot(glyph, snapshot) {
+  const saved = JSON.parse(snapshot);
+  glyph.activeEdges = new Set(saved.activeEdges.filter((id) => isAllowedEdgeIdForGlyph(id, glyph)));
+  glyph.lockedEdges = new Set(saved.lockedEdges.filter((id) => glyph.activeEdges.has(id)));
+  glyph.activePoints = new Set(saved.activePoints.filter((id) => pointFromId(id)));
+  glyph.candidateScores = saved.candidateScores || {};
+  glyph.status = normalizeStatus(saved.status);
+}
+
+function clearGlyphHistory() {
+  state.undoStack.clear();
+  state.redoStack.clear();
+  state.historyStart = null;
+  syncGlyphHistoryButtons();
+}
+
+function syncGlyphHistoryButtons() {
+  const char = currentGlyph()?.char;
+  els.undoButton.disabled = !(state.undoStack.get(char)?.length);
+  els.redoButton.disabled = !(state.redoStack.get(char)?.length);
+}
+
+function beginHistory(glyph = currentGlyph()) {
+  if (state.historyStart === null && glyph) {
+    state.historyStart = { char: glyph.char, before: glyphHistorySnapshot(glyph) };
   }
 }
 
 function finishHistory() {
-  if (state.historyStart === null) return;
-  const after = JSON.stringify(serializeProject());
-  if (after !== state.historyStart) {
-    state.undoStack.push(state.historyStart);
-    if (state.undoStack.length > 80) state.undoStack.shift();
-    state.redoStack = [];
-    persist();
-  }
+  const started = state.historyStart;
+  if (!started) return;
   state.historyStart = null;
+  const glyph = state.glyphs.find((item) => item.char === started.char);
+  if (!glyph || glyphHistorySnapshot(glyph) === started.before) return;
+  const history = state.undoStack.get(started.char) || [];
+  history.push(started.before);
+  if (history.length > 80) history.shift();
+  state.undoStack.set(started.char, history);
+  state.redoStack.delete(started.char);
+  syncGlyphHistoryButtons();
+  persist();
 }
 
-function withHistory(fn) {
-  beginHistory();
+function withHistory(fn, glyph = currentGlyph()) {
+  beginHistory(glyph);
   fn();
   finishHistory();
 }
 
 function undo() {
-  const previous = state.undoStack.pop();
-  if (!previous) return;
-  const currentChar = currentGlyph().char;
-  state.redoStack.push(JSON.stringify(serializeProject()));
-  restoreProject(JSON.parse(previous), { currentChar });
-  syncAllControls();
+  const glyph = currentGlyph();
+  const history = state.undoStack.get(glyph.char);
+  if (!history?.length) return;
+  const previous = history.pop();
+  const redoHistory = state.redoStack.get(glyph.char) || [];
+  redoHistory.push(glyphHistorySnapshot(glyph));
+  state.redoStack.set(glyph.char, redoHistory);
+  applyGlyphHistorySnapshot(glyph, previous);
+  syncStatusToggle();
+  syncGlyphHistoryButtons();
   renderAll();
   persist();
 }
 
 function redo() {
-  const next = state.redoStack.pop();
-  if (!next) return;
-  const currentChar = currentGlyph().char;
-  state.undoStack.push(JSON.stringify(serializeProject()));
-  restoreProject(JSON.parse(next), { currentChar });
-  syncAllControls();
+  const glyph = currentGlyph();
+  const history = state.redoStack.get(glyph.char);
+  if (!history?.length) return;
+  const next = history.pop();
+  const undoHistory = state.undoStack.get(glyph.char) || [];
+  undoHistory.push(glyphHistorySnapshot(glyph));
+  state.undoStack.set(glyph.char, undoHistory);
+  applyGlyphHistorySnapshot(glyph, next);
+  syncStatusToggle();
+  syncGlyphHistoryButtons();
   renderAll();
   persist();
 }
@@ -3396,11 +3260,18 @@ function mergeRemoteProject(remoteProject, previousBaseline) {
       changed = true;
     } else if (glyphSnapshot(localGlyph) !== glyphSnapshot(remoteGlyph)) {
       state.glyphs[index] = normalizeGlyph(remoteGlyph);
+      state.undoStack.delete(remoteGlyph.char);
+      state.redoStack.delete(remoteGlyph.char);
       changed = true;
     }
   }
 
   const settingsChanged = mergeRemoteSharedSettings(remoteProject, previousBaseline, localProject);
+  if (JSON.stringify(localProject.parts) === JSON.stringify(previousBaseline.parts)
+    && JSON.stringify(remoteProject.parts) !== JSON.stringify(previousBaseline.parts)) {
+    state.parts = Array.isArray(remoteProject.parts) ? remoteProject.parts.map(normalizePart).filter(Boolean) : [];
+    changed = true;
+  }
   const nextIndex = state.glyphs.findIndex((glyph) => glyph.char === currentChar);
   if (nextIndex >= 0) state.current = nextIndex;
   if (changed || settingsChanged) {

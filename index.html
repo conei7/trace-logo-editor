@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>制約付きトレース型ロゴ文字エディタ</title>
   <link rel="stylesheet" href="./styles.css">
+  <script src="./kanji-radicals.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -66,7 +67,7 @@
         </div>
         <div class="toolbar">
           <button id="kanjiMode" class="primary-button" type="button">漢字モード</button>
-          <button id="autoTrace" class="primary-button" type="button">自動入力</button>
+          <button id="insertRadical" class="primary-button" type="button">部首入力</button>
           <button id="undoButton" class="icon-button" type="button" title="Undo">↶</button>
           <button id="redoButton" class="icon-button" type="button" title="Redo">↷</button>
         </div>
@@ -99,8 +100,8 @@
         <canvas id="previewCanvas" class="preview-canvas"></canvas>
       </section>
 
-      <section class="section-block">
-        <div class="section-title">漢字部品</div>
+      <details class="section-block part-section" open>
+        <summary class="section-title">漢字部品 <span id="partCount"></span></summary>
         <label class="field-row">
           <span>名前</span>
           <select id="partNameSelect"></select>
@@ -110,14 +111,14 @@
           <input id="partNameInput" type="text" placeholder="任意の名前">
         </label>
         <button id="savePart" class="primary-button full-button" type="button">現在の文字を部品化</button>
+        <p id="radicalMatchNote" class="note-line"></p>
         <div id="partLibrary" class="part-library" aria-label="保存済み部品"></div>
-      </section>
+      </details>
 
       <section class="section-block">
         <div class="section-title">表示</div>
         <label class="check-row"><input id="showReference" type="checkbox" checked>下敷き</label>
         <label class="check-row"><input id="showGrid" type="checkbox" checked>グリッド</label>
-        <label class="check-row"><input id="showConfidence" type="checkbox" checked>信頼度</label>
         <label class="check-row"><input id="showPreview" type="checkbox" checked>プレビュー</label>
         <label class="check-row"><input id="showBaseline" type="checkbox" checked>英小文字ベースライン</label>
         <label class="range-row">
@@ -187,40 +188,6 @@
           <span>太さ補正</span>
           <input id="refWeight" type="range" min="0" max="24" value="0">
           <output id="refWeightValue">0</output>
-        </label>
-      </section>
-
-      <section class="section-block">
-        <div class="section-title">自動入力</div>
-        <label class="range-row">
-          <span>感度</span>
-          <input id="autoSensitivity" type="range" min="0" max="100" value="56">
-          <output id="autoSensitivityValue">56</output>
-        </label>
-        <label class="range-row">
-          <span>密度</span>
-          <input id="autoDensity" type="range" min="0" max="100" value="60">
-          <output id="autoDensityValue">60</output>
-        </label>
-        <label class="range-row">
-          <span>太さ想定</span>
-          <input id="autoProbe" type="range" min="8" max="46" value="24">
-          <output id="autoProbeValue">24</output>
-        </label>
-        <label class="range-row">
-          <span>横/縦優先</span>
-          <input id="autoBias" type="range" min="-50" max="50" value="0">
-          <output id="autoBiasValue">0</output>
-        </label>
-        <label class="range-row">
-          <span>連結優先</span>
-          <input id="autoConnect" type="range" min="0" max="100" value="20">
-          <output id="autoConnectValue">20</output>
-        </label>
-        <label class="range-row">
-          <span>簡略化</span>
-          <input id="autoSimplify" type="range" min="0" max="100" value="35">
-          <output id="autoSimplifyValue">35</output>
         </label>
       </section>
 
