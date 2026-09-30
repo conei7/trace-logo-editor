@@ -525,6 +525,26 @@ textarea {
   flex-wrap: wrap;
 }
 
+.current-radicals {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.current-radicals[hidden] {
+  display: none;
+}
+
+.current-radicals span {
+  color: var(--muted);
+}
+
+.current-radicals strong {
+  font-size: 15px;
+}
+
 .current-char {
   display: grid;
   place-items: center;

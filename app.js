@@ -207,6 +207,9 @@ const els = {
   previewSpacingButtons: document.querySelectorAll("[data-preview-spacing]"),
   kanjiMode: document.getElementById("kanjiMode"),
   insertRadical: document.getElementById("insertRadical"),
+  currentRadicals: document.getElementById("currentRadicals"),
+  currentRadicalsLabel: document.getElementById("currentRadicalsLabel"),
+  currentRadicalsValue: document.getElementById("currentRadicalsValue"),
   undoButton: document.getElementById("undoButton"),
   redoButton: document.getElementById("redoButton"),
   showReference: document.getElementById("showReference"),
@@ -1858,6 +1861,13 @@ function findRegisteredRadicalPart(char) {
 
 function syncRadicalMatch() {
   const char = currentGlyph().char;
+  const radicalNames = (KANJI_RADICAL_NUMBERS[char] || []).map((number) => {
+    const names = KANGXI_RADICAL_NAMES[number] || [];
+    return names.includes(char) ? char : names.find((name) => !/[\u2f00-\u2fd5]/u.test(name));
+  }).filter(Boolean);
+  els.currentRadicals.hidden = !isHan(char);
+  els.currentRadicalsLabel.textContent = radicalNames.length > 1 ? "部首候補" : "部首";
+  els.currentRadicalsValue.textContent = radicalNames.length ? radicalNames.join(" / ") : "未収録";
   const names = getRadicalNames(char).filter((name) => !/[\u2f00-\u2fd5]/u.test(name));
   const part = findRegisteredRadicalPart(char);
   els.insertRadical.disabled = !part;
