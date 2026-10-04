@@ -14,6 +14,13 @@ node local-server.mjs
 
 Then open `http://127.0.0.1:8787`.
 
+## iPhone Home Screen app
+
+Open `https://trace-logo-editor.pages.dev/` in Safari, choose Share, then Add to Home Screen.
+If an Open as Web App switch is shown, leave it enabled. The icon opens Trace Logo
+without the browser address bar. Shared loading and saving still require an internet connection.
+App icons can be regenerated on Windows with `pwsh -File scripts/build-app-icons.ps1`.
+
 ## One-step sharing
 
 Double-click `share.cmd`, or run:
