@@ -145,6 +145,7 @@ const state = {
   glyphs: TEST_CHARS.map(createGlyph),
   preview: { ...DEFAULT_PREVIEW },
   folderFilter: "all",
+  glyphSearch: "",
   kanjiMode: false,
   kanjiGradeFilter: "all",
   kanjiListStrokeWidth: 9,
@@ -174,6 +175,8 @@ const state = {
 const els = {
   charList: document.getElementById("charList"),
   folderTabs: document.getElementById("folderTabs"),
+  glyphSearch: document.getElementById("glyphSearch"),
+  glyphSearchResult: document.getElementById("glyphSearchResult"),
   glyphCount: document.getElementById("glyphCount"),
   charSetInput: document.getElementById("charSetInput"),
   applyCharSet: document.getElementById("applyCharSet"),
@@ -368,6 +371,7 @@ function normalizeKanjiGrade(grade) {
 }
 
 function setKanjiGradeFilter(grade) {
+  clearGlyphSearch();
   const hasElementaryUniverse = KANJI_ELEMENTARY_CHARS.every((char) => state.glyphs.some((glyph) => glyph.char === char));
   if (!state.kanjiMode || !hasElementaryUniverse) {
     enterKanjiMode(grade);
@@ -534,9 +538,34 @@ function bindEvents() {
   els.folderTabs.addEventListener("click", (event) => {
     const button = event.target.closest("[data-folder]");
     if (!button) return;
+    clearGlyphSearch();
     state.folderFilter = button.dataset.folder;
     persist();
     renderAll();
+  });
+
+  const updateGlyphSearch = () => {
+    state.glyphSearch = els.glyphSearch.value.normalize("NFC").trim();
+    renderList();
+    els.charList.scrollTop = 0;
+    els.charList.scrollLeft = 0;
+  };
+  els.glyphSearch.addEventListener("input", (event) => {
+    if (!event.isComposing) updateGlyphSearch();
+  });
+  els.glyphSearch.addEventListener("compositionend", updateGlyphSearch);
+  els.glyphSearch.addEventListener("keydown", (event) => {
+    if (event.isComposing || event.keyCode === 229) return;
+    if (event.key === "Escape") {
+      clearGlyphSearch();
+      renderList();
+    } else if (event.key === "Enter" && state.glyphSearch) {
+      const first = getVisibleGlyphs()[0];
+      if (first) {
+        focusGlyph(first.index);
+        els.glyphSearch.blur();
+      }
+    }
   });
 
   els.statusToggle.addEventListener("click", () => {
@@ -786,7 +815,9 @@ function goToRelativeGlyph(delta) {
   const visible = getVisibleGlyphs();
   if (visible.length <= 1) return;
   const currentVisibleIndex = visible.findIndex(({ index }) => index === state.current);
-  const nextVisibleIndex = (currentVisibleIndex + delta + visible.length) % visible.length;
+  const nextVisibleIndex = currentVisibleIndex < 0
+    ? (delta < 0 ? visible.length - 1 : 0)
+    : (currentVisibleIndex + delta + visible.length) % visible.length;
   focusGlyph(visible[nextVisibleIndex].index);
 }
 
@@ -1031,6 +1062,10 @@ function renderList() {
   renderFolderTabs();
   const fragment = document.createDocumentFragment();
   const visibleGlyphs = getVisibleGlyphs();
+  els.glyphSearchResult.hidden = !state.glyphSearch;
+  els.glyphSearchResult.textContent = visibleGlyphs.length
+    ? `全文字から ${visibleGlyphs.length}字`
+    : "一致する文字がありません";
   visibleGlyphs.forEach(({ glyph, index }) => {
     const card = document.createElement("button");
     card.type = "button";
@@ -1097,10 +1132,17 @@ function renderFolderTabs() {
 }
 
 function getVisibleGlyphs() {
+  const searchChars = new Set(splitGraphemes(state.glyphSearch));
   return state.glyphs
     .map((glyph, index) => ({ glyph, index }))
-    .filter(({ glyph }) => matchesFolderFilter(glyph, state.folderFilter))
-    .filter(({ glyph }) => matchesKanjiGrade(glyph));
+    .filter(({ glyph }) => searchChars.size
+      ? searchChars.has(glyph.char)
+      : matchesFolderFilter(glyph, state.folderFilter) && matchesKanjiGrade(glyph));
+}
+
+function clearGlyphSearch() {
+  state.glyphSearch = "";
+  els.glyphSearch.value = "";
 }
 
 function matchesKanjiGrade(glyph) {
@@ -1127,7 +1169,11 @@ function matchesFolderFilter(glyph, filter) {
 }
 
 function renderGlyphSelect() {
-  const options = getVisibleGlyphs().map(({ glyph, index }) => {
+  const visible = getVisibleGlyphs();
+  if (!visible.some(({ index }) => index === state.current)) {
+    visible.unshift({ glyph: currentGlyph(), index: state.current });
+  }
+  const options = visible.map(({ glyph, index }) => {
     const option = document.createElement("option");
     const widthInfo = getSymbolWidthInfo(glyph.char);
     option.value = String(index);
@@ -2168,6 +2214,8 @@ function applyCharSet(text) {
     els.charSetNote.textContent = "文字がありません";
     return;
   }
+
+  clearGlyphSearch();
 
   state.kanjiMode = parsed.chars.length > 0 && parsed.chars.every(isHan);
   if (!state.kanjiMode) state.kanjiGradeFilter = "all";

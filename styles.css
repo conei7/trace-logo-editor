@@ -127,6 +127,7 @@ button {
 .char-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
   gap: 8px;
   flex: 0 0 clamp(180px, 34vh, 420px);
   min-height: 180px;
@@ -140,6 +141,29 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   flex: 0 0 auto;
+}
+
+.glyph-search {
+  display: grid;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.glyph-search input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.glyph-search input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .folder-tab {
