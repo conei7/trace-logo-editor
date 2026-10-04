@@ -5,7 +5,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY app.js kanji-radicals.js font-export.mjs index.html local-server.mjs styles.css ./
+COPY app.js kanji-radicals.js font-export.mjs index.html local-server.mjs styles.css manifest.webmanifest ./
+COPY icons ./icons
 RUN mkdir -p /app/data && chown -R node:node /app
 
 USER node
