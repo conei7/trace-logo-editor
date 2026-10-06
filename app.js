@@ -85,6 +85,7 @@ const FOLDER_FILTERS = [
 ];
 const STATUS = ["未完成", "完成"];
 const STORAGE_KEY = "trace-logo-editor:v1";
+const SESSION_STORAGE_KEY = "trace-logo-editor:session";
 const FONT_EXPORT_STORAGE_KEY = "trace-logo-editor:font-export";
 const REMOTE_PROJECT_ENDPOINT = "/api/project";
 const REMOTE_PROJECT_PATCH_ENDPOINT = "/api/project/patch";
@@ -99,6 +100,7 @@ let remoteSaveTimer = 0;
 let remoteSaveInFlight = false;
 let pendingRemoteSaveJson = "";
 let remoteProjectBaseline = null;
+let partNameGlyphChar = null;
 
 const DEFAULT_TRANSFORM = {
   scale: 0.86,
@@ -1805,6 +1807,7 @@ function alignCurrentEdges(direction) {
 }
 
 function populatePartNameSelect() {
+  partNameGlyphChar = null;
   els.partNameSelect.replaceChildren();
   for (const group of KANJI_PART_NAME_GROUPS) {
     const optgroup = document.createElement("optgroup");
@@ -1907,6 +1910,7 @@ function findRegisteredRadicalPart(char) {
 
 function syncRadicalMatch() {
   const char = currentGlyph().char;
+  syncDetectedPartName(char);
   const radicalNames = (KANJI_RADICAL_NUMBERS[char] || []).map((number) => {
     const names = KANGXI_RADICAL_NAMES[number] || [];
     return names.includes(char) ? char : names.find((name) => !/[\u2f00-\u2fd5]/u.test(name));
@@ -1921,6 +1925,18 @@ function syncRadicalMatch() {
   els.radicalMatchNote.textContent = !isHan(char) ? "" : part
     ? `部首: ${part.name}（登録済み）`
     : names.length ? `部首候補: ${names.join(" / ")}（未登録）` : "部首情報なし";
+}
+
+function syncDetectedPartName(char) {
+  if (partNameGlyphChar === char) return;
+  partNameGlyphChar = char;
+  const names = getRadicalNames(char).filter((name) => !/[\u2f00-\u2fd5]/u.test(name));
+  if (names.length === 0) return;
+  const selectable = new Set(Array.from(els.partNameSelect.options, (option) => option.value));
+  const name = names.find((candidate) => selectable.has(candidate));
+  els.partNameSelect.value = name || "other";
+  if (!name) els.partNameInput.value = names[0];
+  syncPartCustomNameVisibility();
 }
 
 function insertCurrentRadical() {
@@ -2929,7 +2945,7 @@ function restoreProject(project, options = {}) {
     : [];
   state.parts = Array.isArray(project.parts) ? project.parts.map(normalizePart).filter(Boolean) : [];
   restoreCustomFonts();
-  const settings = project.settings || project;
+  const settings = { ...(project.settings || project), ...(options.session || {}) };
   state.view = { ...DEFAULT_VIEW, ...(settings.view || {}) };
   const fallbackReferenceGlyph = project.glyphs.find((glyph) => glyph.referenceFont || glyph.referenceTransform) || {};
   state.reference = {
@@ -2963,7 +2979,9 @@ function restoreProject(project, options = {}) {
     const index = Number.isInteger(settings.currentIndex) ? settings.currentIndex : 0;
     state.current = clamp(index, 0, state.glyphs.length - 1);
   }
-  moveCurrentIntoVisibleKanjiGrade();
+  if (!options.session || currentGlyph().char !== options.session.currentChar) {
+    moveCurrentIntoVisibleKanjiGrade();
+  }
   if (Number.isFinite(Number(settings.duplicateThreshold))) {
     els.duplicateThreshold.value = clamp(Number(settings.duplicateThreshold), 70, 100);
     els.duplicateThresholdValue.value = `${els.duplicateThreshold.value}%`;
@@ -3113,6 +3131,7 @@ function redo() {
 
 function persist() {
   state.savedAt = new Date().toISOString();
+  cacheSessionLocally();
   const json = JSON.stringify(serializeProject());
   try {
     localStorage.setItem(STORAGE_KEY, json);
@@ -3124,13 +3143,14 @@ function persist() {
 
 async function loadInitialProject() {
   const localProject = readProjectFromStorage();
+  const session = readLocalSession(localProject);
   const remoteProject = await loadRemoteProject();
   remoteProjectBaseline = remoteProject;
   const project = chooseInitialProject(localProject, remoteProject);
   if (!project) return;
 
   try {
-    restoreProject(project);
+    restoreProject(project, { session });
     cacheProjectLocally();
   } catch {
     state.glyphs = TEST_CHARS.map(createGlyph);
@@ -3148,11 +3168,42 @@ function readProjectFromStorage() {
 }
 
 function cacheProjectLocally() {
+  cacheSessionLocally();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject()));
   } catch {
     // Storage can be unavailable in privacy-restricted contexts.
   }
+}
+
+function cacheSessionLocally() {
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+      currentChar: currentGlyph().char,
+      folderFilter: state.folderFilter,
+      kanjiMode: state.kanjiMode,
+      kanjiGradeFilter: state.kanjiGradeFilter
+    }));
+  } catch {
+    // The session is device-local and never included in shared project patches.
+  }
+}
+
+function readLocalSession(localProject) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || "null");
+    if (saved && typeof saved.currentChar === "string" && saved.currentChar) return saved;
+  } catch {
+    // Older versions stored the resume location in the local project instead.
+  }
+  const settings = localProject && (localProject.settings || localProject);
+  if (!settings || typeof settings.currentChar !== "string" || !settings.currentChar) return null;
+  return {
+    currentChar: settings.currentChar,
+    folderFilter: settings.folderFilter,
+    kanjiMode: settings.kanjiMode,
+    kanjiGradeFilter: settings.kanjiGradeFilter
+  };
 }
 
 async function loadRemoteProject() {
