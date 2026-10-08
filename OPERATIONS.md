@@ -1,69 +1,34 @@
 # Trace Logo Editor Operations
 
-## Production layout
+Production operations are managed from the main PC's shared workspace:
 
-- Fixed URL: `https://trace-logo-editor.pages.dev/`
-- SBC host: `orangepi5` (`diva-sbc` SSH alias)
-- SBC repository: `/home/orangepi/trace-logo-editor`
-- Container: `trace_logo_editor`
-- Loopback port: `127.0.0.1:8787`
-- User service: `trace-logo-cloudflare-tunnel.service`
-- Tunnel log: `/home/orangepi/trace-logo-cloudflared.log`
-- Persistent project: `/home/orangepi/trace-logo-editor/data/shared-project.json`
+`C:\Users\tabaw\Documents\sbc-ops`
 
-This deployment is independent from Diva Player. It does not use port 8080, the
-`backend_default` Docker network, `diva-cloudflare-tunnel.service`, or Diva's
-Cloudflare KV namespace.
-
-## Normal deployment
-
-Commit and push on Windows first. Then update only this repository and container:
+Read that workspace's README.md, inventory.json, and the font section of
+OPERATIONS.md for the maintained deployment, backup, recovery, and tunnel
+procedures. This repository remains the source of truth for the application code.
+Do not create a second running deployment or copy its code into the operations repo.
 
 ```powershell
-ssh.exe -F C:\Users\tabaw\.ssh\config diva-sbc "cd ~/trace-logo-editor && git pull --ff-only && docker compose up -d --build"
+cd C:\Users\tabaw\Documents\sbc-ops
+.\ops.ps1 status font
+.\ops.ps1 backup font
+.\ops.ps1 deploy font
+.\ops.ps1 rollback font
 ```
 
-Static or Pages Function changes also require a Pages deployment:
+The production layout is unchanged:
 
-```powershell
-npm.cmd run build:pages
-npx.cmd --yes wrangler@latest pages deploy dist --project-name trace-logo-editor --branch main
-```
+- Public URL: https://trace-logo-editor.pages.dev/
+- SSH alias: diva-sbc
+- SBC code: /home/orangepi/trace-logo-editor
+- Container: trace_logo_editor, bound to 127.0.0.1:8787
+- Dedicated tunnel: trace-logo-cloudflare-tunnel.service
+- Persistent data: data/shared-project.json on the SBC, excluded from Git
 
-## Status checks
+Static and Pages Function changes also need the Pages deployment described in
+this repository's [README.md](README.md). Application development and Git commits
+stay in this repository; server lifecycle and recovery use sbc-ops.
 
-```powershell
-ssh.exe -F C:\Users\tabaw\.ssh\config diva-sbc "cd ~/trace-logo-editor && docker compose ps && systemctl --user status trace-logo-cloudflare-tunnel.service --no-pager"
-curl.exe -fsS https://trace-logo-editor.pages.dev/api/health
-```
-
-The current temporary tunnel URL is available with:
-
-```powershell
-ssh.exe -F C:\Users\tabaw\.ssh\config diva-sbc "grep -hEo 'https://[-a-zA-Z0-9.]+\.trycloudflare\.com' ~/trace-logo-cloudflared.log | tail -1"
-```
-
-## Data backup and restore
-
-The project JSON is deliberately excluded from Git. Back it up before data repair
-or host migration:
-
-```powershell
-scp.exe -F C:\Users\tabaw\.ssh\config diva-sbc:/home/orangepi/trace-logo-editor/data/shared-project.json .
-```
-
-To restore, stop the editor container, copy the JSON, then start it again. Do not
-replace the file while users are actively editing.
-
-```powershell
-ssh.exe -F C:\Users\tabaw\.ssh\config diva-sbc "cd ~/trace-logo-editor && docker compose stop"
-scp.exe -F C:\Users\tabaw\.ssh\config shared-project.json diva-sbc:/home/orangepi/trace-logo-editor/data/shared-project.json
-ssh.exe -F C:\Users\tabaw\.ssh\config diva-sbc "cd ~/trace-logo-editor && docker compose up -d"
-```
-
-## Boot behavior
-
-Docker uses `restart: unless-stopped`. The tunnel is a user systemd service. Since
-linger is disabled on this SBC, crontab also starts the tunnel service after boot.
-The service updates the editor's own Cloudflare KV whenever its Quick Tunnel URL
-changes, so the fixed Pages URL remains unchanged.
+This deployment is independent of DIVA and the bot manager. User linger is
+currently enabled; the former instructions describing it as disabled are obsolete.
