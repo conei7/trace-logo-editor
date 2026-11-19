@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Author, check and send AI glyph proposals for the 4x4 kanji grid.
 
-Proposals are reviewed by a person in the app. This tool never writes glyph
-data: `push` only talks to /api/proposals. See docs/ai-glyphs.md.
+Proposals are reviewed by a person in the app; `push` only talks to
+/api/proposals. The one command that writes glyph data is `adopt`, for a
+choice the owner made in conversation. See docs/ai-glyphs.md.
 """
 import argparse
 import hashlib
@@ -594,6 +595,38 @@ def cmd_push(args):
     print(f"sent {len(result.get('chars', []))} proposals to {args.url}: {''.join(result.get('chars', []))}")
 
 
+def cmd_adopt(args):
+    """Applies a variant the owner picked in conversation, as the app's adopt button would."""
+    project = request(f"{args.url}/api/project")
+    proposals = request(f"{args.url}/api/proposals")
+    glyphs = {glyph["char"]: glyph for glyph in project["glyphs"]}
+    picks = []
+    for pick in args.picks:
+        match = re.fullmatch(r"(.)([1-9])", pick)
+        if not match:
+            fail(f"'{pick}' should be a character and a variant number, like 衣1")
+        char, number = match.group(1), int(match.group(2))
+        item = proposals.get("items", {}).get(char)
+        if not item or item["status"] != "pending":
+            fail(f"{char} has no pending proposal")
+        if number > len(item["variants"]):
+            fail(f"{char} has only {len(item['variants'])} variants")
+        if glyphs[char]["activeEdges"] and not args.replace:
+            fail(f"{char} already has edges; pass --replace if the owner asked to replace them")
+        picks.append((char, number - 1, item))
+    patch = {"glyphs": []}
+    for char, index, item in picks:
+        edges = list(item["variants"][index]["activeEdges"])
+        patch["glyphs"].append({**glyphs[char], "activeEdges": edges, "lockedEdges": edges, "activePoints": [],
+                                "status": "完成" if args.done else "未完成"})
+    request(f"{args.url}/api/project/patch", patch)
+    for char, index, item in picks:
+        request(f"{args.url}/api/proposals/decide", {"char": char, "status": "adopted", "variant": index,
+                                                      "final": args.done, "comment": args.comment,
+                                                      "createdAt": item.get("createdAt")})
+    print(f"adopted {' '.join(args.picks)} as {'完成' if args.done else '未完成'} on {args.url}")
+
+
 def main():
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8")
@@ -642,6 +675,13 @@ def main():
     push = add("push", cmd_push, "send a batch to the review queue (proposals only)")
     push.add_argument("batch")
     push.add_argument("--url", default=DEFAULT_URL)
+
+    adopt = add("adopt", cmd_adopt, "apply variants the owner chose in conversation (writes glyph data)")
+    adopt.add_argument("picks", nargs="+", help="character and variant number, e.g. 衣1 位2")
+    adopt.add_argument("--done", action="store_true", help="mark the glyphs 完成 instead of 未完成")
+    adopt.add_argument("--replace", action="store_true", help="allow replacing a glyph that already has edges")
+    adopt.add_argument("--comment", default="", help="the owner's remark, stored with the decision")
+    adopt.add_argument("--url", default=DEFAULT_URL)
 
     args = parser.parse_args()
     args.handler(args)

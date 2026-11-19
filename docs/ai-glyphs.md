@@ -28,9 +28,38 @@ explicit request. In the first trial, characters with four stacked layers
 
 - 流: the left stroke of 川 bends out to the lower left even beside 氵 (chosen
   over three straight verticals).
-- 和: 口 is two cells wide on x = 2..4 and touches 禾, as in 知 (chosen over a
-  detached one-cell box).
+- 和: first adopted with 口 two cells wide and touching 禾; the owner later
+  called the same construction in 加 out of the question, so detached variants
+  are under review.
 - 路: undecided; two variants wait in the review queue.
+- 衣: 亠, then ノ from the centre, a vertical with a hook under it, and a long
+  right-falling stroke joined to the 亠 by a short stem (`20-22; 01-41; 21-03;
+  12-14-24; 22-44; 42-33`).
+- 位: narrow 立 is tick, bar, two short verticals that close into a V on the
+  base line (`30-31; 21-41; 22-23-34-43-42; 24-44`). The base does not reach
+  the 亻.
+- 加: 力 on x = 0..2 as `01-21-24-14; 10-13-04`. 口 is detached, one cell wide,
+  and rather tall than small.
+- 果: 木 under 田 keeps its bar, stem and two short legs from the bar; a wide 田
+  is preferred over a narrow one.
+
+## What the owner rejects outright
+
+From the first conversational round. These outrank the house style below.
+
+- **Joining what is separate.** Components that do not touch in the real
+  character must not touch or share a line (a 口 using 力's vertical as its own
+  side; a base line running into the radical).
+- **Crossing what does not cross.** Two strokes that only meet in the real
+  character must not be drawn through each other.
+- **Breaking a key component.** 木 has to stay a 木, 女 a 女, 立 a 立. If a
+  component cannot keep its shape in the space, change the layout rather than
+  squash it. Saying "this one is simply hard" is better than a crushed shape.
+- **Bad spacing.** Components pushed far apart, or one component sitting low
+  or off to a side for no reason.
+
+When all candidates are weak the owner says so and names the least bad one;
+treat that as a direction, not as approval.
 
 ## Loop
 
@@ -115,8 +144,9 @@ These come from the finished glyphs. Always confirm against the real data
    consistency. Rough and readable beats uniform at this stage.
 2. **Left radicals are registered parts**, used as they are: 氵 礻 禾 糹 亻 彳
    訁 and others (`ascii --parts`). The right component then usually sits on
-   x = 2..4 and may touch the radical or share a line with it (糹 shares the
-   y = 2 line). A left component that is not a registered part (力 in 加) is
+   x = 2..4. Keep a gap to the radical unless the real character joins them;
+   some finished glyphs share a line (糹 with its right side), but do not add
+   new contact. A left component that is not a registered part (力 in 加) is
    squeezed into x = 0..2 the way finished glyphs squeeze theirs. Where a
    registered part and a finished glyph draw the same component differently,
    follow the finished glyph in the same position (心 under 急 思 is the model
@@ -134,7 +164,8 @@ These come from the finished glyphs. Always confirm against the real data
    run from a centre point to the bottom corners.
 7. A hook is one cell: `44-34` at the bottom of a right vertical (刂 月 円), or a
    one-cell upturn for 乚.
-8. Lines may touch and cross freely; density is fine. Avoid two parallel
+8. Density is fine, but strokes touch or cross only where the real character
+   does. Avoid two parallel
    diagonals one cell apart when one belongs to the radical and one to the right
    component: they read as a single doubled stroke. Likewise avoid diagonals
    of two components lining up into one long stroke.
