@@ -28,9 +28,13 @@ explicit request. In the first trial, characters with four stacked layers
 
 - 流: the left stroke of 川 bends out to the lower left even beside 氵 (chosen
   over three straight verticals).
-- 和: first adopted with 口 two cells wide and touching 禾; the owner later
-  called the same construction in 加 out of the question, so detached variants
-  are under review.
+- 和: 禾 part plus a detached 口 one cell wide on y = 1..3 (`31-41-43-33-31`).
+  An earlier version with 口 touching 禾 was replaced.
+- 以: short left stroke with its upturn, a dot, and a small low 人
+  (`01-04-13; 11-22; 31-33; 33-24; 33-44`).
+- 案: 宀, 女 with its bar, 木 with bar and short legs, accepted as the least
+  cramped option (`20-21; 01-41; 01-02; 41-42; 21-12-23; 31-13; 02-42; 03-43;
+  23-24; 23-14; 23-34`).
 - 路: undecided; two variants wait in the review queue.
 - 衣: 亠, then ノ from the centre, a vertical with a hook under it, and a long
   right-falling stroke joined to the 亠 by a short stem (`20-22; 01-41; 21-03;
@@ -38,10 +42,12 @@ explicit request. In the first trial, characters with four stacked layers
 - 位: narrow 立 is tick, bar, two short verticals that close into a V on the
   base line (`30-31; 21-41; 22-23-34-43-42; 24-44`). The base does not reach
   the 亻.
-- 加: 力 on x = 0..2 as `01-21-24-14; 10-13-04`. 口 is detached, one cell wide,
-  and rather tall than small.
-- 果: 木 under 田 keeps its bar, stem and two short legs from the bar; a wide 田
-  is preferred over a narrow one.
+- 加: 力 on x = 0..2 as `01-21-24-14; 10-13-04`, with a detached 口 one cell
+  wide on y = 1..4. The height of a right-hand 口 is chosen per character (tall
+  here, y = 1..3 in 和).
+- 果: 木 under 田 keeps its bar, stem and two short legs from the bar. The owner
+  asked to see a full-width 田 and then chose the narrow one (x = 1..3): try
+  what they suggest, but let them judge the rendering.
 
 ## What the owner rejects outright
 
