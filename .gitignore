@@ -17,3 +17,6 @@ trace-logo-test.otf
 
 .agents/
 .codex/
+
+data/ai/
+.claude/

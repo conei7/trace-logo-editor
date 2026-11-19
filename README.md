@@ -48,6 +48,17 @@ Open the same Cloudflare quick tunnel URL on a phone and desktop to work on the 
 
 Static file usage and Cloudflare Pages without a write API still fall back to browser local storage and manual JSON export/import.
 
+## AI proposals
+
+Kanji can be drafted by an AI agent and reviewed in the app. Proposals are kept in
+`data/proposals.json`, apart from the shared project, and only change a glyph when a
+person adopts one. Pending proposals appear as an `AI案` chip and list tab; the review
+panel offers adopt-and-finish, adopt-and-edit and reject with a comment.
+
+Agents follow [docs/ai-glyphs.md](docs/ai-glyphs.md) and use
+`python tools/glyph_proposals.py` to study finished glyphs, check a batch and send it
+to the review queue. Run the tests with `npm test`.
+
 ## Cloudflare Pages
 
 Use `trace-logo-editor` as the project root.

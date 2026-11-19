@@ -90,6 +90,9 @@ const FONT_EXPORT_STORAGE_KEY = "trace-logo-editor:font-export";
 const REMOTE_PROJECT_ENDPOINT = "/api/project";
 const REMOTE_PROJECT_PATCH_ENDPOINT = "/api/project/patch";
 const REMOTE_SAVE_DEBOUNCE_MS = 900;
+const REMOTE_PROPOSALS_ENDPOINT = "/api/proposals";
+const PROPOSAL_DECISIONS_STORAGE_KEY = "trace-logo-editor:proposal-decisions";
+const PROPOSAL_FILTER_ID = "proposals";
 
 let GRID_COLS = DEFAULT_GRID_COLS;
 let GRID_ROWS = DEFAULT_GRID_ROWS;
@@ -101,6 +104,8 @@ let remoteSaveInFlight = false;
 let pendingRemoteSaveJson = "";
 let remoteProjectBaseline = null;
 let partNameGlyphChar = null;
+let proposalDecisionQueue = null;
+let proposalDecisionFlushInFlight = false;
 
 const DEFAULT_TRANSFORM = {
   scale: 0.86,
@@ -156,6 +161,10 @@ const state = {
   savedAt: null,
   customFonts: [],
   parts: [],
+  proposals: new Map(),
+  proposalFilter: false,
+  proposalChar: null,
+  proposalVariant: 0,
   reference: {
     font: DEFAULT_REFERENCE.font,
     transform: { ...DEFAULT_REFERENCE.transform }
@@ -199,6 +208,15 @@ const els = {
   glyphSelect: document.getElementById("glyphSelect"),
   nextGlyph: document.getElementById("nextGlyph"),
   statusToggle: document.getElementById("statusToggle"),
+  proposalJump: document.getElementById("proposalJump"),
+  proposalPanel: document.getElementById("proposalPanel"),
+  proposalNote: document.getElementById("proposalNote"),
+  proposalNext: document.getElementById("proposalNext"),
+  proposalVariants: document.getElementById("proposalVariants"),
+  proposalComment: document.getElementById("proposalComment"),
+  proposalAdoptDone: document.getElementById("proposalAdoptDone"),
+  proposalAdopt: document.getElementById("proposalAdopt"),
+  proposalReject: document.getElementById("proposalReject"),
   canvas: document.getElementById("editorCanvas"),
   previewCanvas: document.getElementById("previewCanvas"),
   previewText: document.getElementById("previewText"),
@@ -285,6 +303,7 @@ async function init() {
   syncAllControls();
   resizeCanvases();
   renderAll();
+  loadProposals();
 }
 
 function createEdges(cols, rows) {
@@ -359,6 +378,7 @@ function enterKanjiMode(gradeOrChars = "all") {
   state.kanjiMode = true;
   state.kanjiGradeFilter = isCustomSet ? "all" : normalizeKanjiGrade(gradeOrChars);
   state.folderFilter = "kanji";
+  state.proposalFilter = false;
   state.view.showReference = true;
   if (GRID_COLS !== 4 || GRID_ROWS !== 4) setKanjiGrid(4);
   moveCurrentIntoVisibleKanjiGrade();
@@ -382,6 +402,7 @@ function setKanjiGradeFilter(grade) {
   state.kanjiMode = true;
   state.kanjiGradeFilter = normalizeKanjiGrade(grade);
   state.folderFilter = "kanji";
+  state.proposalFilter = false;
   moveCurrentIntoVisibleKanjiGrade();
   els.charSetNote.textContent = `漢字一覧: ${state.kanjiGradeFilter === "all" ? "小学校" : `${state.kanjiGradeFilter}年`} / ${state.glyphs.length}字を保持`;
   syncAllControls();
@@ -541,6 +562,11 @@ function bindEvents() {
     const button = event.target.closest("[data-folder]");
     if (!button) return;
     clearGlyphSearch();
+    if (button.dataset.folder === PROPOSAL_FILTER_ID) {
+      showProposalQueue();
+      return;
+    }
+    state.proposalFilter = false;
     state.folderFilter = button.dataset.folder;
     persist();
     renderAll();
@@ -580,6 +606,28 @@ function bindEvents() {
   });
 
   els.insertRadical.addEventListener("click", insertCurrentRadical);
+
+  els.proposalJump.addEventListener("click", () => {
+    if (!state.proposalFilter) {
+      showProposalQueue();
+      return;
+    }
+    state.proposalFilter = false;
+    renderAll();
+  });
+  els.proposalNext.addEventListener("click", goToNextProposal);
+  els.proposalVariants.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-proposal-variant]");
+    if (!button) return;
+    state.proposalVariant = Number(button.dataset.proposalVariant);
+    renderAll();
+  });
+  els.proposalAdoptDone.addEventListener("click", () => decideProposal("adopted", true));
+  els.proposalAdopt.addEventListener("click", () => decideProposal("adopted", false));
+  els.proposalReject.addEventListener("click", () => decideProposal("rejected", false));
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") loadProposals();
+  });
 
   els.undoButton.addEventListener("click", undo);
   els.redoButton.addEventListener("click", redo);
@@ -928,6 +976,7 @@ function resizeCanvasToElement(canvas) {
 
 function renderAll() {
   renderList();
+  renderProposalPanel();
   renderEditor();
   renderPreview();
   renderSentencePreview();
@@ -1125,9 +1174,18 @@ function renderFolderTabs() {
   for (const filter of FOLDER_FILTERS) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `folder-tab${state.folderFilter === filter.id ? " is-active" : ""}`;
+    button.className = `folder-tab${!state.proposalFilter && state.folderFilter === filter.id ? " is-active" : ""}`;
     button.dataset.folder = filter.id;
     button.textContent = `${filter.label} ${counts[filter.id] || 0}`;
+    fragment.append(button);
+  }
+  const pendingCount = pendingProposalIndexes().length;
+  if (pendingCount > 0 || state.proposalFilter) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `folder-tab${state.proposalFilter ? " is-active" : ""}`;
+    button.dataset.folder = PROPOSAL_FILTER_ID;
+    button.textContent = `AI案 ${pendingCount}`;
     fragment.append(button);
   }
   els.folderTabs.replaceChildren(fragment);
@@ -1135,6 +1193,9 @@ function renderFolderTabs() {
 
 function getVisibleGlyphs() {
   const searchChars = new Set(splitGraphemes(state.glyphSearch));
+  if (searchChars.size === 0 && state.proposalFilter) {
+    return pendingProposalIndexes().map((index) => ({ glyph: state.glyphs[index], index }));
+  }
   return state.glyphs
     .map((glyph, index) => ({ glyph, index }))
     .filter(({ glyph }) => searchChars.size
@@ -1267,6 +1328,7 @@ function renderEditor() {
     drawBaselineGuide(ctx, layout);
   }
 
+  drawProposalPreview(ctx, glyph, layout);
   drawActiveEdges(ctx, glyph, layout);
   drawActivePoints(ctx, glyph, layout);
   drawIntersections(ctx, layout);
@@ -3417,6 +3479,230 @@ function mergeRemoteSharedSettings(remoteProject, previousBaseline, localProject
     changed = true;
   }
   return changed;
+}
+
+function pendingProposalFor(char) {
+  const item = state.proposals.get(char);
+  if (!item || item.status !== "pending" || !Array.isArray(item.variants) || item.variants.length === 0) return null;
+  const grid = item.grid || {};
+  return (grid.cols || 4) === GRID_COLS && (grid.rows || 4) === GRID_ROWS ? item : null;
+}
+
+function pendingProposalIndexes() {
+  const indexes = [];
+  if (state.proposals.size === 0) return indexes;
+  state.glyphs.forEach((glyph, index) => {
+    if (pendingProposalFor(glyph.char)) indexes.push(index);
+  });
+  return indexes;
+}
+
+function selectedProposalIndex(item) {
+  if (state.proposalChar !== item.char) {
+    state.proposalChar = item.char;
+    state.proposalVariant = 0;
+    els.proposalComment.value = "";
+  }
+  return clamp(Number(state.proposalVariant) || 0, 0, item.variants.length - 1);
+}
+
+function proposalPreviewGlyph(char, variant) {
+  const edges = new Set(variant.activeEdges);
+  return { char, activeEdges: edges, lockedEdges: edges, activePoints: new Set() };
+}
+
+function renderProposalPanel() {
+  const pendingCount = pendingProposalIndexes().length;
+  els.proposalJump.hidden = pendingCount === 0 && !state.proposalFilter;
+  els.proposalJump.textContent = `AI案 ${pendingCount}`;
+  els.proposalJump.classList.toggle("is-active", state.proposalFilter);
+  els.proposalJump.setAttribute("aria-pressed", state.proposalFilter ? "true" : "false");
+
+  const glyph = currentGlyph();
+  const item = pendingProposalFor(glyph.char);
+  els.proposalPanel.hidden = !item;
+  if (!item) return;
+
+  const selected = selectedProposalIndex(item);
+  const replacing = glyph.activeEdges.size > 0;
+  els.proposalNote.textContent = [item.variants[selected].note, item.note].filter(Boolean).join(" / ");
+  els.proposalNext.disabled = pendingCount <= 1;
+  els.proposalAdoptDone.textContent = replacing ? "置き換えて完成" : "採用して完成";
+  els.proposalAdopt.textContent = replacing ? "置き換えて直す" : "採用して直す";
+  els.proposalVariants.hidden = item.variants.length < 2;
+  els.proposalVariants.replaceChildren(...item.variants.map((variant, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `proposal-variant${index === selected ? " is-active" : ""}`;
+    button.dataset.proposalVariant = String(index);
+    button.setAttribute("aria-pressed", index === selected ? "true" : "false");
+    button.innerHTML = buildSvg(proposalPreviewGlyph(glyph.char, variant), {
+      size: 96,
+      strokeWidth: state.kanjiListStrokeWidth,
+      pad: 12,
+      includeXml: false
+    });
+    const label = document.createElement("span");
+    label.textContent = `案${index + 1}`;
+    button.append(label);
+    return button;
+  }));
+}
+
+function drawProposalPreview(context, glyph, layout) {
+  const item = pendingProposalFor(glyph.char);
+  if (!item) return;
+  context.save();
+  context.lineCap = "square";
+  context.lineJoin = "miter";
+  context.globalAlpha = 0.85;
+  context.strokeStyle = "#c77816";
+  context.lineWidth = Math.max(9, layout.cell * 0.16);
+  for (const id of item.variants[selectedProposalIndex(item)].activeEdges) {
+    const edge = EDGE_BY_ID.get(id);
+    if (edge && isAllowedEdgeIdForGlyph(id, glyph)) strokeEdge(context, edge, layout);
+  }
+  context.restore();
+}
+
+function showProposalQueue() {
+  clearGlyphSearch();
+  state.proposalFilter = true;
+  if (pendingProposalFor(currentGlyph().char)) {
+    syncAllControls();
+    renderAll();
+    return;
+  }
+  goToNextProposal();
+}
+
+function goToNextProposal() {
+  const pending = pendingProposalIndexes();
+  if (pending.length === 0) {
+    state.proposalFilter = false;
+    syncAllControls();
+    renderAll();
+    return;
+  }
+  const next = pending.find((index) => index > state.current);
+  focusGlyph(next === undefined ? pending[0] : next);
+}
+
+function decideProposal(status, markDone) {
+  const glyph = currentGlyph();
+  const item = pendingProposalFor(glyph.char);
+  if (!item) return;
+  const variant = selectedProposalIndex(item);
+
+  if (status === "adopted") {
+    const edges = item.variants[variant].activeEdges.filter((id) => isAllowedEdgeIdForGlyph(id, glyph));
+    withHistory(() => {
+      glyph.activeEdges = new Set(edges);
+      glyph.lockedEdges = new Set(edges);
+      glyph.activePoints = new Set();
+      glyph.candidateScores = {};
+      if (markDone) glyph.status = "完成";
+    }, glyph);
+  }
+
+  const decision = {
+    char: item.char,
+    createdAt: item.createdAt || null,
+    status,
+    variant: status === "adopted" ? variant : null,
+    final: status === "adopted" && markDone,
+    comment: els.proposalComment.value.trim(),
+    decidedAt: new Date().toISOString()
+  };
+  applyProposalDecisionLocally(state.proposals, decision);
+  queuedProposalDecisions().push(decision);
+  saveQueuedProposalDecisions();
+  flushProposalDecisions();
+  els.proposalComment.value = "";
+
+  if (status === "adopted" && !markDone) {
+    syncAllControls();
+    renderAll();
+    return;
+  }
+  goToNextProposal();
+}
+
+function applyProposalDecisionLocally(items, decision) {
+  const item = items.get(decision.char);
+  if (!item || item.status !== "pending" || (item.createdAt || null) !== (decision.createdAt || null)) return;
+  items.set(decision.char, {
+    ...item,
+    status: decision.status,
+    chosen: decision.variant,
+    comment: decision.comment,
+    decidedAt: decision.decidedAt
+  });
+}
+
+function queuedProposalDecisions() {
+  if (proposalDecisionQueue) return proposalDecisionQueue;
+  proposalDecisionQueue = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROPOSAL_DECISIONS_STORAGE_KEY) || "[]");
+    if (Array.isArray(saved)) {
+      proposalDecisionQueue = saved.filter((decision) => decision && typeof decision.char === "string");
+    }
+  } catch {
+    // Decisions made in this session are still kept in memory.
+  }
+  return proposalDecisionQueue;
+}
+
+function saveQueuedProposalDecisions() {
+  try {
+    localStorage.setItem(PROPOSAL_DECISIONS_STORAGE_KEY, JSON.stringify(queuedProposalDecisions()));
+  } catch {
+    // Storage can be unavailable in privacy-restricted contexts.
+  }
+}
+
+async function flushProposalDecisions() {
+  if (proposalDecisionFlushInFlight || location.protocol === "file:") return;
+  proposalDecisionFlushInFlight = true;
+  try {
+    const queue = queuedProposalDecisions();
+    while (queue.length > 0) {
+      const decision = queue[0];
+      const response = await fetch(`${REMOTE_PROPOSALS_ENDPOINT}/decide`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(decision)
+      });
+      // Keep the decision when the server was not reached; drop it once the API answered.
+      if (response.headers.get("x-trace-logo-api") !== "1" || response.status >= 500) break;
+      queue.splice(queue.indexOf(decision), 1);
+      saveQueuedProposalDecisions();
+    }
+  } catch (error) {
+    console.warn("Proposal decision is waiting to be sent", error);
+  } finally {
+    proposalDecisionFlushInFlight = false;
+  }
+}
+
+async function loadProposals() {
+  if (location.protocol === "file:") return;
+  try {
+    await flushProposalDecisions();
+    const response = await fetch(REMOTE_PROPOSALS_ENDPOINT, { cache: "no-store" });
+    if (!response.ok || response.headers.get("x-trace-logo-api") !== "1") return;
+    const data = await response.json();
+    const items = new Map();
+    for (const item of Object.values((data && data.items) || {})) {
+      if (item && typeof item.char === "string" && Array.isArray(item.variants)) items.set(item.char, item);
+    }
+    for (const decision of queuedProposalDecisions()) applyProposalDecisionLocally(items, decision);
+    state.proposals = items;
+    renderAll();
+  } catch {
+    // Reviewing proposals needs the shared server; editing keeps working without it.
+  }
 }
 
 function clamp(value, min, max) {

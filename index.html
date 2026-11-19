@@ -76,6 +76,7 @@
             <select id="glyphSelect" class="glyph-select" aria-label="文字選択"></select>
             <button id="nextGlyph" class="icon-button glyph-nav-button" type="button" title="次の文字" aria-label="次の文字">›</button>
             <button id="statusToggle" class="status-toggle" type="button" aria-pressed="false">未完成</button>
+            <button id="proposalJump" class="proposal-chip" type="button" hidden>AI案 0</button>
           </div>
           <div id="currentRadicals" class="current-radicals" hidden>
             <span id="currentRadicalsLabel">部首</span>
@@ -89,6 +90,21 @@
           <button id="redoButton" class="icon-button" type="button" title="Redo">↷</button>
         </div>
       </header>
+
+      <section id="proposalPanel" class="proposal-panel" aria-label="AI案のレビュー" hidden>
+        <div class="proposal-head">
+          <strong>AI案</strong>
+          <span id="proposalNote" class="proposal-note"></span>
+          <button id="proposalNext" class="ghost-button" type="button">次の案 ›</button>
+        </div>
+        <div id="proposalVariants" class="proposal-variants" role="group" aria-label="案の選択"></div>
+        <div class="proposal-actions">
+          <button id="proposalAdoptDone" class="primary-button" type="button">採用して完成</button>
+          <button id="proposalAdopt" class="ghost-button" type="button">採用して直す</button>
+          <button id="proposalReject" class="danger-button" type="button">却下</button>
+        </div>
+        <input id="proposalComment" type="text" maxlength="200" placeholder="直してほしい点（任意）" aria-label="AI案へのコメント" autocomplete="off" enterkeyhint="done">
+      </section>
 
       <section class="canvas-stage" aria-label="編集キャンバス">
         <canvas id="editorCanvas"></canvas>

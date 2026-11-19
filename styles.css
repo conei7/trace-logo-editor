@@ -689,6 +689,125 @@ button:disabled {
   width: 100%;
 }
 
+.proposal-chip {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #e6c48f;
+  border-radius: 7px;
+  background: #fff7e8;
+  color: #8a5208;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.proposal-chip.is-active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #fff;
+}
+
+.proposal-chip[hidden],
+.proposal-panel[hidden],
+.proposal-variants[hidden] {
+  display: none;
+}
+
+.proposal-panel {
+  display: grid;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid #e6c48f;
+  border-radius: 8px;
+  background: #fffaf0;
+  box-shadow: var(--shadow);
+}
+
+.proposal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.proposal-head strong {
+  flex: 0 0 auto;
+  color: #8a5208;
+}
+
+.proposal-note {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proposal-head .ghost-button {
+  flex: 0 0 auto;
+}
+
+.proposal-variants {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.proposal-variant {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 2px;
+  justify-items: center;
+  width: 76px;
+  padding: 4px;
+  border: 2px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.proposal-variant svg {
+  display: block;
+  width: 56px;
+  height: 56px;
+}
+
+.proposal-variant.is-active {
+  border-color: var(--amber);
+  color: #8a5208;
+}
+
+.proposal-panel input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.proposal-panel input:focus {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+
+.proposal-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.proposal-actions button {
+  padding: 0 6px;
+}
+
 .canvas-stage {
   display: grid;
   place-items: center;
@@ -1116,6 +1235,35 @@ input[type="checkbox"] {
     grid-column: 1 / 4;
     grid-row: 3;
     width: 100%;
+  }
+
+  .proposal-chip {
+    grid-column: 2 / 4;
+    grid-row: 1;
+    justify-self: end;
+    min-height: 42px;
+  }
+
+  .proposal-panel {
+    order: 3;
+    padding: 10px;
+  }
+
+  .proposal-variant {
+    width: 58px;
+  }
+
+  .proposal-variant svg {
+    width: 46px;
+    height: 46px;
+  }
+
+  .proposal-variant span {
+    display: none;
+  }
+
+  .canvas-stage {
+    order: 2;
   }
 
   .glyph-nav-button,

@@ -4,15 +4,19 @@ import { createServer } from "node:http";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildOpenTypeFont } from "./font-export.mjs";
+import { applyProposalBatch, applyProposalDecision, normalizeProposalDoc } from "./proposals.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)));
 const port = Number(process.argv[2] || process.env.PORT || 8787);
 const host = process.env.HOST || "127.0.0.1";
-const dataDir = resolve(join(root, "data"));
+const dataDir = resolve(process.env.DATA_DIR || process.argv[3] || join(root, "data"));
 const sharedProjectPath = join(dataDir, "shared-project.json");
 const sharedBackupPath = join(dataDir, "shared-project.backup.json");
+const proposalsPath = join(dataDir, "proposals.json");
+const proposalsBackupPath = join(dataDir, "proposals.backup.json");
 const maxBodyBytes = 8 * 1024 * 1024;
 let projectWriteQueue = Promise.resolve();
+let proposalWriteQueue = Promise.resolve();
 
 const mime = {
   ".html": "text/html; charset=utf-8",
@@ -183,6 +187,53 @@ async function handleProjectPatchApi(request, response) {
   }
 }
 
+function queueProposalWrite(task) {
+  const queued = proposalWriteQueue.then(task, task);
+  proposalWriteQueue = queued.catch(() => {});
+  return queued;
+}
+
+async function readProposals() {
+  if (!existsSync(proposalsPath)) return normalizeProposalDoc(null);
+  return normalizeProposalDoc(JSON.parse(await readFile(proposalsPath, "utf8")));
+}
+
+async function writeProposals(doc) {
+  await mkdir(dataDir, { recursive: true });
+  if (existsSync(proposalsPath)) {
+    await copyFile(proposalsPath, proposalsBackupPath);
+  }
+  const tmpPath = `${proposalsPath}.tmp`;
+  await writeFile(tmpPath, JSON.stringify(doc, null, 2), "utf8");
+  await rename(tmpPath, proposalsPath);
+}
+
+async function handleProposalsApi(request, response, action) {
+  try {
+    if (!action && (request.method === "GET" || request.method === "HEAD")) {
+      sendJson(response, 200, request.method === "HEAD" ? {} : await readProposals());
+      return;
+    }
+    if (request.method !== "POST") {
+      sendJson(response, 405, { error: "Method not allowed" });
+      return;
+    }
+
+    const body = JSON.parse(await readRequestBody(request));
+    const result = await queueProposalWrite(async () => {
+      const current = await readProposals();
+      const applied = action === "decide"
+        ? { doc: applyProposalDecision(current, body) }
+        : applyProposalBatch(current, body);
+      await writeProposals(applied.doc);
+      return applied;
+    });
+    sendJson(response, 200, { ok: true, chars: result.chars, proposals: result.doc });
+  } catch (error) {
+    sendJson(response, error.status || (error instanceof SyntaxError ? 400 : 500), { error: error.message });
+  }
+}
+
 async function handleFontExportApi(request, response) {
   if (request.method !== "POST") {
     sendJson(response, 405, { error: "Method not allowed" });
@@ -236,6 +287,11 @@ const server = createServer((request, response) => {
     handleProjectPatchApi(request, response).catch((error) => {
       sendJson(response, 500, { error: error.message });
     });
+    return;
+  }
+
+  if (requestPath === "/api/proposals" || requestPath === "/api/proposals/decide") {
+    handleProposalsApi(request, response, requestPath.endsWith("/decide") ? "decide" : "");
     return;
   }
 
