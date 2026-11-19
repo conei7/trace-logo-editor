@@ -14,6 +14,24 @@ file is the brief for the agent: read it fully before designing anything.
 - Batch files and pulled data live in `data/ai/` (ignored by Git). Do not commit
   production glyph data.
 
+## Working mode for now
+
+The owner wants glyphs made in conversation first, not in bulk. Take a few
+characters at a time, show the candidates as images in the chat, let the owner
+choose, and settle how recurring components are drawn as they come up. Record
+each decision under "Decisions so far" so the next session starts from it.
+Batch generation, including the two-model comparison below, waits for an
+explicit request. In the first trial, characters with four stacked layers
+(愛) were judged not good enough to delegate.
+
+## Decisions so far
+
+- 流: the left stroke of 川 bends out to the lower left even beside 氵 (chosen
+  over three straight verticals).
+- 和: 口 is two cells wide on x = 2..4 and touches 禾, as in 知 (chosen over a
+  detached one-cell box).
+- 路: undecided; two variants wait in the review queue.
+
 ## Loop
 
 ```bash
