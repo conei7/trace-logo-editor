@@ -117,6 +117,25 @@ def stroke_edges(spec):
     return edges
 
 
+def edges_to_strokes(edges):
+    """Edge ids -> the stroke shorthand, one polyline per maximal straight run."""
+    steps = {"h": (1, 0), "v": (0, 1), "d1": (1, 1), "d2": (-1, 1)}
+    remaining = {}
+    for edge in edges:
+        x1, y1, x2, y2 = edge_points(edge)
+        remaining[(edge.split("-")[0], x1, y1)] = (x2, y2)
+    runs = []
+    for kind, x, y in sorted(remaining, key=lambda key: (list(steps).index(key[0]), key[2], key[1])):
+        dx, dy = steps[kind]
+        if (kind, x, y) not in remaining or (kind, x - dx, y - dy) in remaining:
+            continue
+        end = (x, y)
+        while (kind, end[0], end[1]) in remaining:
+            end = remaining.pop((kind, end[0], end[1]))
+        runs.append(f"{x}{y}-{end[0]}{end[1]}")
+    return "; ".join(runs)
+
+
 def expand_variant(variant, project):
     parts = {}
     for part in project.get("parts", []):
@@ -186,6 +205,13 @@ def expand_batch(batch, project):
             variants.append({"activeEdges": edges, "note": variant.get("note", ""), "source": source})
         if not variants:
             fail(f"{char}: no variants")
+        authors = {}
+        for variant in variants:
+            for name in variant["source"].split("+"):
+                authors[name] = authors.get(name, 0) + 1
+        crowded = [name or "this batch" for name, count in authors.items() if count > 3]
+        if crowded:
+            warnings.append(f"{char}: more than three variants from {', '.join(crowded)}; keep the best three")
         items.append({"char": char, "note": item.get("note", ""), "grid": {"cols": GRID, "rows": GRID}, "variants": variants})
     if not items:
         fail("batch has no items")
@@ -362,6 +388,11 @@ def cmd_ascii(args):
     print_ascii(selected_items(args, load("project.json")))
 
 
+def cmd_strokes(args):
+    for label, edges in selected_items(args, load("project.json")):
+        print(f"{label}: {edges_to_strokes(edges)}")
+
+
 def cmd_sheet(args):
     render_sheet(selected_items(args, load("project.json")), args.out, cols=args.cols)
 
@@ -428,6 +459,7 @@ def main():
     add("pull", cmd_pull, "download the shared project and proposals into data/ai").add_argument("--url", default=DEFAULT_URL)
     add("status", cmd_status, "summarise untouched kanji, pending proposals and review feedback")
     add_selection(add("ascii", cmd_ascii, "print glyphs as text grids"))
+    add_selection(add("strokes", cmd_strokes, "print glyphs in the stroke shorthand, ready to copy into a batch"))
     sheet = add("sheet", cmd_sheet, "render glyphs to a PNG contact sheet")
     add_selection(sheet)
     sheet.add_argument("-o", "--out", required=True)

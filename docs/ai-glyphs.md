@@ -19,13 +19,18 @@ file is the brief for the agent: read it fully before designing anything.
 ```bash
 python tools/glyph_proposals.py pull                 # project + proposals -> data/ai, prints status
 python tools/glyph_proposals.py sheet --done -o data/ai/done.png --cols 12
-python tools/glyph_proposals.py ascii 族 方 長 --parts # exact edges of related glyphs and parts
+python tools/glyph_proposals.py ascii 族 方 長          # related glyphs as text grids
+python tools/glyph_proposals.py strokes 族 方 長        # the same glyphs in the stroke shorthand, ready to copy
+python tools/glyph_proposals.py strokes --parts       # registered parts in the shorthand
 # write data/ai/<batch>.json
 python tools/glyph_proposals.py check data/ai/<batch>.json --sheet data/ai/<batch>.png
 # look at the PNG, fix, repeat until every variant reads as its character
 python tools/glyph_proposals.py push data/ai/<batch>.json   # only after the owner's go-ahead
 ```
 
+The full `--done` sheet is too large to study closely; use it for the overall
+feel, then render named subsets (`sheet 立 倍 暗 新 -o …`) of glyphs that share a
+component with your target. `check --sheet` accepts `--cols` too.
 `sheet` needs Pillow; everything else is standard library. Pass
 `--url http://127.0.0.1:8787` to `pull` and `push` to work against a local server.
 
@@ -58,13 +63,17 @@ and `40-04` is the full diagonal. There are no dots and no curves.
 }
 ```
 
-- `parts`: names of registered parts, pasted exactly as registered.
+- `parts`: names of registered parts, pasted exactly as registered. Parts are
+  locked to their position; to use one elsewhere, retype it with `strokes`.
 - `glyphs`: copy every edge of an existing glyph as a starting point.
 - `strokes`: added edges. `remove`: edges taken away again after everything else.
 - `edges`: raw edge ids (`h-x-y`, `v-x-y`, `d1-x-y`, `d2-x-y`) if you need them.
 - `source`: who drew it. The app hides it so the review stays blind.
-- One to three variants per character. Offer more than one only when they are
-  real alternatives a reviewer could prefer, not noise.
+- `note`: one short line in Japanese; the reviewer reads it in the app next to
+  the variant. Say what the variant gave up or how it differs from the others.
+- One to three variants per character. Explore as many as you like, then keep
+  the best; offer more than one only when they are real alternatives a reviewer
+  could prefer, not noise.
 
 ## House style
 
@@ -77,10 +86,17 @@ These come from the finished glyphs. Always confirm against the real data
 2. **Left radicals are registered parts**, used as they are: 氵 礻 禾 糹 亻 彳
    訁 and others (`ascii --parts`). The right component then usually sits on
    x = 2..4 and may touch the radical or share a line with it (糹 shares the
-   y = 2 line).
+   y = 2 line). A left component that is not a registered part (力 in 加) is
+   squeezed into x = 0..2 the way finished glyphs squeeze theirs. Where a
+   registered part and a finished glyph draw the same component differently,
+   follow the finished glyph in the same position (心 under 急 思 is the model
+   for a bottom 心).
 3. **Only five horizontal levels exist.** Merge neighbouring horizontals, drop
    dots and small ticks, and keep what makes the character recognisable and
-   different from its look-alikes. Bold omission is normal here.
+   different from its look-alikes. Bold omission is normal here. When a
+   component cannot fit its usual form (立 in two columns, four stacked layers
+   in 愛), there is no fixed priority: offer the competing trade-offs as
+   variants and say in `note` what each one gave up.
 4. 亠 is a one-cell tick from the top plus a horizontal on y = 1.
 5. 口 is a closed box, 日 a box with a middle line. Narrow columns give 1-wide
    boxes; that is accepted.
@@ -90,7 +106,8 @@ These come from the finished glyphs. Always confirm against the real data
    one-cell upturn for 乚.
 8. Lines may touch and cross freely; density is fine. Avoid two parallel
    diagonals one cell apart when one belongs to the radical and one to the right
-   component: they read as a single doubled stroke.
+   component: they read as a single doubled stroke. Likewise avoid diagonals
+   of two components lining up into one long stroke.
 9. A glyph must not be identical to any other glyph (`check` warns).
 10. Judge the rendered PNG, not the stroke list. If it does not read as the
     character at a glance next to its neighbours, redesign it.
