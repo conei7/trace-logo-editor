@@ -19,6 +19,10 @@ DEFAULT_URL = os.environ.get("TRACE_LOGO_URL", "https://trace-logo-editor.pages.
 ROOT = Path(__file__).resolve().parent.parent
 WORK = ROOT / "data" / "ai"
 GRID = 4
+IDS_FILE = WORK / "ids" / "ids.txt"
+IDS_URL = "https://raw.githubusercontent.com/cjkvi/cjkvi-ids/master/ids.txt"
+IDS_ARITY = {**{op: 2 for op in "⿰⿱⿴⿵⿶⿷⿸⿹⿺⿻"}, "⿲": 3, "⿳": 3}
+IDS_ROLES = {"⿰": "左右", "⿱": "上下", "⿲": "左中右", "⿳": "上中下", "⿻": "重重"}
 EDGE = re.compile(r"^(h|v|d1|d2)-(\d+)-(\d+)$")
 
 
@@ -57,6 +61,89 @@ def is_kanji(char):
 def grade_sets():
     source = (ROOT / "app.js").read_text(encoding="utf-8")
     return {grade: chars for grade, chars in re.findall(r'^\s+(\d): splitGraphemes\("([^"]+)"\)', source, re.M)}
+
+
+# --- components -------------------------------------------------------------
+
+def load_ids():
+    """char -> ideographic description sequence, preferring the Japanese form."""
+    if not IDS_FILE.exists():
+        fail(f"{IDS_FILE} is missing; run `fetch-ids` first")
+    table = {}
+    for line in IDS_FILE.read_text(encoding="utf-8").splitlines():
+        fields = line.split("\t")
+        if line.startswith("#") or len(fields) < 3:
+            continue
+        options = fields[2:]
+        chosen = next((option for option in options if re.search(r"\[[A-Z]*J[A-Z]*\]", option)), options[0])
+        table[fields[1]] = re.sub(r"\[[A-Z]+\]", "", chosen)
+    return table
+
+
+def ids_tokens(text):
+    tokens, index = [], 0
+    while index < len(text):
+        if text[index] == "&" and ";" in text[index:]:
+            end = text.index(";", index) + 1
+            tokens.append(text[index:end])
+            index = end
+        else:
+            tokens.append(text[index])
+            index += 1
+    return tokens
+
+
+def decompose(char, table, seen=()):
+    """Tree of {'char', 'op', 'children'}; nested operators become unnamed nodes."""
+    sequence = table.get(char)
+    if not sequence or sequence == char or char in seen:
+        return {"char": char, "op": None, "children": []}
+    tokens = ids_tokens(sequence)
+
+    def read():
+        token = tokens.pop(0) if tokens else "？"
+        if token in IDS_ARITY:
+            return {"char": None, "op": token, "children": [read() for _ in range(IDS_ARITY[token])]}
+        return decompose(token, table, seen + (char,))
+
+    tree = read()
+    tree["char"] = char
+    return tree
+
+
+def is_stroke(char):
+    return (len(char) != 1 or 0x31C0 <= ord(char) <= 0x31EF or 0x2460 <= ord(char) <= 0x2473
+            or char in "一丨丶丿乙亅乚𠃌𠄌")
+
+
+def components(tree, path=""):
+    """Yields (char, path) for every named node; path is a chain like 下上."""
+    if tree["char"] and path:
+        yield tree["char"], path
+    roles = IDS_ROLES.get(tree["op"], "外内")
+    for index, child in enumerate(tree["children"]):
+        yield from components(child, path + roles[min(index, len(roles) - 1)])
+
+
+def tree_text(tree):
+    if not tree["op"]:
+        return tree["char"]
+    return tree["op"] + "".join(child["char"] if child["char"] else tree_text(child) for child in tree["children"])
+
+
+def component_index(project, table):
+    """component -> [(char, path, status)] over the kanji of the project."""
+    index = {}
+    for glyph in project["glyphs"]:
+        if glyph.get("folder") != "kanji":
+            continue
+        status = "完成" if glyph.get("status") == "完成" else ("下書き" if glyph["activeEdges"] else "未着手")
+        seen = set()
+        for component, path in components(decompose(glyph["char"], table)):
+            if (component, path) not in seen:
+                seen.add((component, path))
+                index.setdefault(component, []).append((glyph["char"], path, status))
+    return index
 
 
 # --- geometry ---------------------------------------------------------------
@@ -397,6 +484,76 @@ def cmd_sheet(args):
     render_sheet(selected_items(args, load("project.json")), args.out, cols=args.cols)
 
 
+def cmd_fetch_ids(args):
+    IDS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    req = urllib.request.Request(IDS_URL, headers={"user-agent": "trace-logo-editor-tools"})
+    with urllib.request.urlopen(req, timeout=120) as response:
+        IDS_FILE.write_bytes(response.read())
+    print(f"wrote {IDS_FILE} ({IDS_FILE.stat().st_size} bytes). CJKVI-IDS, based on the CHISE IDS database (GPL); "
+          "kept in data/ai for local lookups only, do not commit it.")
+
+
+def glyph_progress(glyph):
+    return "完成" if glyph.get("status") == "完成" else ("下書き" if glyph["activeEdges"] else "未着手")
+
+
+def cmd_find(args):
+    project, table = load("project.json"), load_ids()
+    index = component_index(project, table)
+    glyphs = {glyph["char"]: glyph for glyph in project["glyphs"]}
+    shown = []
+    for component in "".join(args.components):
+        hits = index.get(component, [])
+        own = glyphs.get(component)
+        whole = f" (as a glyph: {glyph_progress(own)})" if own else ""
+        print(f"{component}: in {len({char for char, _, _ in hits})} kanji{whole}")
+        for status in ("完成", "下書き", "未着手"):
+            by_path = {}
+            for char, path, hit_status in hits:
+                if hit_status == status:
+                    by_path.setdefault(path, []).append(char)
+            if by_path:
+                print(f"  {status}: " + "  ".join(f"{path}:{''.join(chars)}" for path, chars in sorted(by_path.items())))
+            if status == "完成":
+                shown += [char for chars in by_path.values() for char in chars]
+        if own and own["activeEdges"]:
+            shown.append(component)
+    if args.sheet:
+        render_sheet([(char, glyphs[char]["activeEdges"]) for char in dict.fromkeys(shown)], args.sheet, cols=args.cols)
+
+
+def cmd_study(args):
+    project, table = load("project.json"), load_ids()
+    index = component_index(project, table)
+    glyphs = {glyph["char"]: glyph for glyph in project["glyphs"]}
+    parts = {part["name"] for part in project.get("parts", [])}
+    shown = []
+    for target in "".join(args.chars):
+        tree = decompose(target, table)
+        print(f"{target} = {tree_text(tree)}")
+        for component, path in dict.fromkeys(components(tree)):
+            if is_stroke(component):
+                continue
+            hits = [(char, hit_path) for char, hit_path, status in index.get(component, [])
+                    if status == "完成" and char != target]
+            # Same position first, then the same last step, then everything else.
+            hits.sort(key=lambda hit: (hit[1] != path, hit[1][-1:] != path[-1:], len(hit[1])))
+            notes = []
+            own = glyphs.get(component)
+            if own and own["activeEdges"]:
+                notes.append(f"glyph {glyph_progress(own)}")
+                shown.append(component)
+            if component in parts:
+                notes.append("registered part")
+            listing = " ".join(f"{char}({hit_path})" for char, hit_path in hits[:args.limit]) or "none finished"
+            more = f" +{len(hits) - args.limit}" if len(hits) > args.limit else ""
+            print(f"  {component} [{path}]{' ' + ', '.join(notes) if notes else ''}: {listing}{more}")
+            shown += [char for char, _ in hits[:args.limit]]
+        print()
+    if args.sheet:
+        render_sheet([(char, glyphs[char]["activeEdges"]) for char in dict.fromkeys(shown)], args.sheet, cols=args.cols)
+
+
 def cmd_check(args):
     payload, warnings = expand_batch(json.loads(Path(args.batch).read_text(encoding="utf-8")), load("project.json"))
     for warning in warnings:
@@ -464,6 +621,16 @@ def main():
     add_selection(sheet)
     sheet.add_argument("-o", "--out", required=True)
     sheet.add_argument("--cols", type=int, default=10)
+    add("fetch-ids", cmd_fetch_ids, "download the kanji decomposition table used by find and study")
+    find = add("find", cmd_find, "list kanji that contain a component, by position and progress")
+    find.add_argument("components", nargs="+")
+    find.add_argument("--sheet", help="render the finished ones to this PNG")
+    find.add_argument("--cols", type=int, default=10)
+    study = add("study", cmd_study, "break characters into components and list finished glyphs that share them")
+    study.add_argument("chars", nargs="+")
+    study.add_argument("--limit", type=int, default=12, help="finished glyphs to list per component")
+    study.add_argument("--sheet", help="render the listed glyphs to this PNG")
+    study.add_argument("--cols", type=int, default=10)
     check = add("check", cmd_check, "expand and validate a batch file")
     check.add_argument("batch")
     check.add_argument("--sheet", help="also render the variants to this PNG")

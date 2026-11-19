@@ -18,6 +18,9 @@ file is the brief for the agent: read it fully before designing anything.
 
 ```bash
 python tools/glyph_proposals.py pull                 # project + proposals -> data/ai, prints status
+python tools/glyph_proposals.py fetch-ids            # once: kanji decomposition table for study/find
+python tools/glyph_proposals.py study 愛 路 --sheet data/ai/study.png  # components, and finished glyphs that share them
+python tools/glyph_proposals.py find 心 夂             # every kanji with a component, by position and progress
 python tools/glyph_proposals.py sheet --done -o data/ai/done.png --cols 12
 python tools/glyph_proposals.py ascii 族 方 長          # related glyphs as text grids
 python tools/glyph_proposals.py strokes 族 方 長        # the same glyphs in the stroke shorthand, ready to copy
@@ -31,6 +34,10 @@ python tools/glyph_proposals.py push data/ai/<batch>.json   # only after the own
 The full `--done` sheet is too large to study closely; use it for the overall
 feel, then render named subsets (`sheet 立 倍 暗 新 -o …`) of glyphs that share a
 component with your target. `check --sheet` accepts `--cols` too.
+`study` and `find` print a position after each character: a chain read from the
+outside in, using 左右 上下 中 外内 重 (so 下上 is the upper half of the lower
+half). The decomposition table is CJKVI-IDS (based on CHISE, GPL); it stays in
+`data/ai/ids/` for local lookups and is not committed.
 `sheet` needs Pillow; everything else is standard library. Pass
 `--url http://127.0.0.1:8787` to `pull` and `push` to work against a local server.
 
@@ -80,9 +87,14 @@ and `40-04` is the full diagonal. There are no dots and no curves.
 These come from the finished glyphs. Always confirm against the real data
 (`sheet --done`, `ascii`) rather than trusting this list alone.
 
-1. **Reuse before inventing.** Find finished glyphs that share a component and
-   copy how they built it (旅 follows 族, 練 follows 東 and 線). The same
-   component should look the same across the font.
+1. **Reuse before inventing.** Run `study` on the target, look at the finished
+   glyphs that share its components and start from how they built them (旅
+   follows 族, 練 follows 東 and 線). The finished glyphs are not uniform: the
+   same component is drawn differently from one kanji to the next, sometimes on
+   purpose (two strokes of 氵 were slanted in one glyph because the right side
+   got in the way) and sometimes not. So treat an existing form as a starting
+   point, bend it when it collides with its neighbour, and do not chase exact
+   consistency. Rough and readable beats uniform at this stage.
 2. **Left radicals are registered parts**, used as they are: 氵 礻 禾 糹 亻 彳
    訁 and others (`ascii --parts`). The right component then usually sits on
    x = 2..4 and may touch the radical or share a line with it (糹 shares the

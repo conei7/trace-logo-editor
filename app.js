@@ -89,7 +89,13 @@ const SESSION_STORAGE_KEY = "trace-logo-editor:session";
 const FONT_EXPORT_STORAGE_KEY = "trace-logo-editor:font-export";
 const REMOTE_PROJECT_ENDPOINT = "/api/project";
 const REMOTE_PROJECT_PATCH_ENDPOINT = "/api/project/patch";
+const REMOTE_PROJECT_REVISION_ENDPOINT = "/api/project/revision";
 const REMOTE_SAVE_DEBOUNCE_MS = 900;
+const REMOTE_SAVE_RETRY_MS = 5000;
+const REMOTE_REFRESH_INTERVAL_MS = 30000;
+const UNSENT_STORAGE_KEY = "trace-logo-editor:unsent";
+const SYNC_MIGRATION_STORAGE_KEY = "trace-logo-editor:sync-v2";
+const SET_ASIDE_STORAGE_KEY = "trace-logo-editor:set-aside";
 const REMOTE_PROPOSALS_ENDPOINT = "/api/proposals";
 const PROPOSAL_DECISIONS_STORAGE_KEY = "trace-logo-editor:proposal-decisions";
 const PROPOSAL_FILTER_ID = "proposals";
@@ -103,6 +109,9 @@ let remoteSaveTimer = 0;
 let remoteSaveInFlight = false;
 let pendingRemoteSaveJson = "";
 let remoteProjectBaseline = null;
+let offlineBaseline = null;
+let carriedUnsent = null;
+let remoteRefreshInFlight = false;
 let partNameGlyphChar = null;
 let proposalDecisionQueue = null;
 let proposalDecisionFlushInFlight = false;
@@ -626,8 +635,11 @@ function bindEvents() {
   els.proposalAdopt.addEventListener("click", () => decideProposal("adopted", false));
   els.proposalReject.addEventListener("click", () => decideProposal("rejected", false));
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") loadProposals();
+    if (document.visibilityState !== "visible") return;
+    refreshRemoteProject();
+    loadProposals();
   });
+  window.setInterval(refreshRemoteProject, REMOTE_REFRESH_INTERVAL_MS);
 
   els.undoButton.addEventListener("click", undo);
   els.redoButton.addEventListener("click", redo);
@@ -3194,12 +3206,14 @@ function redo() {
 function persist() {
   state.savedAt = new Date().toISOString();
   cacheSessionLocally();
-  const json = JSON.stringify(serializeProject());
+  const project = serializeProject();
+  const json = JSON.stringify(project);
   try {
     localStorage.setItem(STORAGE_KEY, json);
   } catch {
     // Storage can be unavailable in privacy-restricted contexts.
   }
+  cacheUnsentChanges(project);
   scheduleRemoteSave(json);
 }
 
@@ -3207,8 +3221,13 @@ async function loadInitialProject() {
   const localProject = readProjectFromStorage();
   const session = readLocalSession(localProject);
   const remoteProject = await loadRemoteProject();
+  const unsent = readUnsentChanges();
   remoteProjectBaseline = remoteProject;
-  const project = chooseInitialProject(localProject, remoteProject);
+  // The shared copy is the starting point; only edits this device never got to send are laid on top.
+  const merged = remoteProject
+    ? mergeLocalIntoRemote(remoteProject, localProject, unsent, hasSyncMigrated())
+    : null;
+  const project = merged ? merged.project : localProject;
   if (!project) return;
 
   try {
@@ -3217,6 +3236,207 @@ async function loadInitialProject() {
   } catch {
     state.glyphs = TEST_CHARS.map(createGlyph);
     state.current = 0;
+    return;
+  }
+
+  if (!merged) {
+    offlineBaseline = localProject;
+    carriedUnsent = unsent;
+    return;
+  }
+  markSyncMigrated();
+  if (merged.setAside.length > 0) keepSetAsideGlyphs(merged.setAside);
+  if (merged.setAside.length > 0 && !merged.legacy) {
+    for (const glyph of merged.setAside) {
+      state.undoStack.set(glyph.char, [glyphHistorySnapshot(normalizeGlyph(glyph))]);
+    }
+    els.charSetNote.textContent = `ほかの端末の変更を優先しました: ${merged.setAside.map((glyph) => glyph.char).join("")}（その文字で↶を押すとこの端末の版に戻せます）`;
+  }
+  const current = serializeProject();
+  cacheUnsentChanges(current);
+  if (merged.hasUnsent) scheduleRemoteSave(JSON.stringify(current));
+}
+
+function mergeLocalIntoRemote(remoteProject, localProject, unsent, migrated) {
+  const project = { ...remoteProject, glyphs: [...(remoteProject.glyphs || [])] };
+  const indexByChar = new Map(project.glyphs.map((glyph, index) => [glyph.char, index]));
+  const setAside = [];
+  let hasUnsent = false;
+  const hasMarks = (glyph) => !!glyph && ((glyph.activeEdges || []).length > 0 || (glyph.activePoints || []).length > 0);
+  const keepLocal = (glyph) => {
+    const index = indexByChar.get(glyph.char);
+    if (index === undefined) {
+      indexByChar.set(glyph.char, project.glyphs.length);
+      project.glyphs.push(glyph);
+    } else {
+      project.glyphs[index] = glyph;
+    }
+    hasUnsent = true;
+  };
+
+  if (unsent) {
+    const bases = unsent.bases || {};
+    for (const glyph of unsent.patch.glyphs || []) {
+      const index = indexByChar.get(glyph.char);
+      const remoteSnapshot = index === undefined ? null : glyphSnapshot(project.glyphs[index]);
+      if (remoteSnapshot === glyphSnapshot(glyph)) continue;
+      // Keep the unsent edit unless someone else changed the same glyph in the meantime.
+      if (remoteSnapshot === null || !Object.hasOwn(bases, glyph.char) || bases[glyph.char] === remoteSnapshot) {
+        keepLocal(glyph);
+      } else {
+        setAside.push(glyph);
+      }
+    }
+    if (unsent.patch.settings && Object.keys(unsent.patch.settings).length > 0) {
+      project.settings = mergePlainObject(project.settings, unsent.patch.settings);
+      hasUnsent = true;
+    }
+    if (Array.isArray(unsent.patch.parts)) {
+      project.parts = mergePartsById(remoteProject.parts, unsent.patch.parts, unsent.patch.partsBaseIds);
+      hasUnsent = true;
+    }
+    for (const key of ["grid", "gridSize", "gridCols", "gridRows", "customFonts", "composition"]) {
+      if (Object.hasOwn(unsent.patch, key)) {
+        project[key] = unsent.patch[key];
+        hasUnsent = true;
+      }
+    }
+  } else if (!migrated && localProject && Array.isArray(localProject.glyphs)
+    && Date.parse(localProject.savedAt || "") > Date.parse(remoteProject.savedAt || "")) {
+    // First run of this sync: the device has no record of what it sent, so it only
+    // contributes glyphs the shared copy lacks and never replaces drawn ones.
+    for (const glyph of localProject.glyphs) {
+      if (!glyph || typeof glyph.char !== "string" || !hasMarks(glyph)) continue;
+      const index = indexByChar.get(glyph.char);
+      const remoteGlyph = index === undefined ? null : project.glyphs[index];
+      if (!hasMarks(remoteGlyph)) {
+        keepLocal(glyph);
+      } else if (glyphSnapshot(remoteGlyph) !== glyphSnapshot(glyph)) {
+        setAside.push(glyph);
+      }
+    }
+    setAside.length = Math.min(setAside.length, 200);
+    return { project, setAside, hasUnsent, legacy: true };
+  }
+  return { project, setAside, hasUnsent };
+}
+
+function mergePlainObject(target, patch) {
+  const result = target && typeof target === "object" && !Array.isArray(target) ? { ...target } : {};
+  for (const [key, value] of Object.entries(patch || {})) {
+    result[key] = value && typeof value === "object" && !Array.isArray(value) ? mergePlainObject(result[key], value) : value;
+  }
+  return result;
+}
+
+function mergePartsById(remoteParts, localParts, baseIds) {
+  const remote = Array.isArray(remoteParts) ? remoteParts : [];
+  const local = Array.isArray(localParts) ? localParts : [];
+  const base = new Set(baseIds || []);
+  const localIds = new Set(local.map((part) => part.id));
+  const merged = remote.filter((part) => !base.has(part.id) || localIds.has(part.id));
+  const mergedIds = new Set(merged.map((part) => part.id));
+  for (const part of local) {
+    if (!base.has(part.id) && !mergedIds.has(part.id)) merged.push(part);
+  }
+  return merged;
+}
+
+function readUnsentChanges() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(UNSENT_STORAGE_KEY) || "null");
+    return saved && saved.patch && Array.isArray(saved.patch.glyphs) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheUnsentChanges(project) {
+  try {
+    const baseline = remoteProjectBaseline || offlineBaseline;
+    if (!baseline) return;
+    const patch = buildRemoteProjectPatch(project, baseline);
+    const baselineGlyphs = new Map((baseline.glyphs || []).map((glyph) => [glyph.char, glyph]));
+    const carried = remoteProjectBaseline ? null : carriedUnsent;
+    const bases = {};
+    for (const glyph of patch.glyphs) {
+      if (carried && carried.bases && Object.hasOwn(carried.bases, glyph.char)) {
+        bases[glyph.char] = carried.bases[glyph.char];
+      } else {
+        bases[glyph.char] = baselineGlyphs.has(glyph.char) ? glyphSnapshot(baselineGlyphs.get(glyph.char)) : null;
+      }
+    }
+    if (carried) {
+      // Started without the server: earlier unsent edits stay queued alongside this session's.
+      const touched = new Set(patch.glyphs.map((glyph) => glyph.char));
+      for (const glyph of carried.patch.glyphs || []) {
+        if (touched.has(glyph.char)) continue;
+        patch.glyphs.push(glyph);
+        if (carried.bases && Object.hasOwn(carried.bases, glyph.char)) bases[glyph.char] = carried.bases[glyph.char];
+      }
+      for (const [key, value] of Object.entries(carried.patch)) {
+        if (key !== "glyphs" && key !== "savedAt" && key !== "settings" && !Object.hasOwn(patch, key)) patch[key] = value;
+      }
+      patch.settings = mergePlainObject(carried.patch.settings, patch.settings);
+    }
+    if (hasRemotePatchChanges(patch)) {
+      localStorage.setItem(UNSENT_STORAGE_KEY, JSON.stringify({ patch, bases }));
+    } else {
+      localStorage.removeItem(UNSENT_STORAGE_KEY);
+    }
+  } catch {
+    // Without storage the edits still reach the server while the page stays open.
+  }
+}
+
+function hasSyncMigrated() {
+  try {
+    return localStorage.getItem(SYNC_MIGRATION_STORAGE_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+function markSyncMigrated() {
+  try {
+    localStorage.setItem(SYNC_MIGRATION_STORAGE_KEY, "1");
+  } catch {
+    // Storage can be unavailable in privacy-restricted contexts.
+  }
+}
+
+function keepSetAsideGlyphs(glyphs) {
+  try {
+    const kept = JSON.parse(localStorage.getItem(SET_ASIDE_STORAGE_KEY) || "[]");
+    const entry = { at: new Date().toISOString(), glyphs };
+    localStorage.setItem(SET_ASIDE_STORAGE_KEY, JSON.stringify([...(Array.isArray(kept) ? kept : []), entry].slice(-5)));
+  } catch {
+    // The versions stay reachable through undo for this session.
+  }
+}
+
+async function refreshRemoteProject() {
+  if (!remoteSaveAvailable || !remoteProjectBaseline || remoteRefreshInFlight || remoteSaveInFlight
+    || pendingRemoteSaveJson || state.drawing || document.visibilityState !== "visible") return;
+  const baseline = remoteProjectBaseline;
+  remoteRefreshInFlight = true;
+  try {
+    const meta = await fetch(REMOTE_PROJECT_REVISION_ENDPOINT, { cache: "no-store" });
+    if (!meta.ok || meta.headers.get("x-trace-logo-api") !== "1") return;
+    const { revision } = await meta.json();
+    if (revision === null || revision === undefined || revision === baseline.revision) return;
+    const response = await fetch(REMOTE_PROJECT_ENDPOINT, { cache: "no-store" });
+    if (!response.ok || response.headers.get("x-trace-logo-api") !== "1") return;
+    const remoteProject = await response.json();
+    // A save that finished meanwhile already brought a newer copy.
+    if (remoteProjectBaseline !== baseline || remoteSaveInFlight || state.drawing) return;
+    mergeRemoteProject(remoteProject, baseline);
+    remoteProjectBaseline = remoteProject;
+    cacheUnsentChanges(serializeProject());
+  } catch {
+    // The next tick tries again.
+  } finally {
+    remoteRefreshInFlight = false;
   }
 }
 
@@ -3282,18 +3502,6 @@ async function loadRemoteProject() {
   }
 }
 
-function chooseInitialProject(localProject, remoteProject) {
-  if (!remoteProject) return localProject;
-  if (!localProject) return remoteProject;
-
-  const localTime = Date.parse(localProject.savedAt || "");
-  const remoteTime = Date.parse(remoteProject.savedAt || "");
-  if (Number.isFinite(localTime) && Number.isFinite(remoteTime)) {
-    return localTime > remoteTime ? localProject : remoteProject;
-  }
-  return remoteProject;
-}
-
 function scheduleRemoteSave(json) {
   if (!remoteSaveAvailable || location.protocol === "file:") return;
   pendingRemoteSaveJson = json;
@@ -3306,6 +3514,7 @@ async function flushRemoteSave() {
   const json = pendingRemoteSaveJson;
   pendingRemoteSaveJson = "";
   remoteSaveInFlight = true;
+  let retry = false;
 
   try {
     const project = JSON.parse(json);
@@ -3317,23 +3526,28 @@ async function flushRemoteSave() {
       headers: { "content-type": "application/json" },
       body: patch ? JSON.stringify(patch) : json
     });
-    remoteSaveAvailable = response.headers.get("x-trace-logo-api") === "1";
-    if (!response.ok) {
+    // A tunnel hiccup answers without the API header; keep the edit queued and try again.
+    const reached = response.headers.get("x-trace-logo-api") === "1";
+    if (!reached || !response.ok) {
+      retry = !reached || response.status >= 500;
       console.warn("Remote autosave failed", response.status);
     } else {
       const result = await response.json();
       if (result.project) {
         mergeRemoteProject(result.project, previousBaseline);
         remoteProjectBaseline = result.project;
+        cacheUnsentChanges(serializeProject());
       }
     }
   } catch (error) {
+    retry = true;
     console.warn("Remote autosave failed", error);
   } finally {
     remoteSaveInFlight = false;
+    if (retry && !pendingRemoteSaveJson) pendingRemoteSaveJson = json;
     if (pendingRemoteSaveJson) {
       window.clearTimeout(remoteSaveTimer);
-      remoteSaveTimer = window.setTimeout(flushRemoteSave, REMOTE_SAVE_DEBOUNCE_MS);
+      remoteSaveTimer = window.setTimeout(flushRemoteSave, retry ? REMOTE_SAVE_RETRY_MS : REMOTE_SAVE_DEBOUNCE_MS);
     }
   }
 }
@@ -3369,6 +3583,9 @@ function buildRemoteProjectPatch(project, baseline) {
     if (JSON.stringify(project[key]) !== JSON.stringify(baseline[key])) {
       patch[key] = project[key];
     }
+  }
+  if (Object.hasOwn(patch, "parts")) {
+    patch.partsBaseIds = (Array.isArray(baseline.parts) ? baseline.parts : []).map((part) => part.id);
   }
   return patch;
 }
@@ -3438,9 +3655,10 @@ function mergeRemoteProject(remoteProject, previousBaseline) {
   }
 
   const settingsChanged = mergeRemoteSharedSettings(remoteProject, previousBaseline, localProject);
-  if (JSON.stringify(localProject.parts) === JSON.stringify(previousBaseline.parts)
-    && JSON.stringify(remoteProject.parts) !== JSON.stringify(previousBaseline.parts)) {
-    state.parts = Array.isArray(remoteProject.parts) ? remoteProject.parts.map(normalizePart).filter(Boolean) : [];
+  const baseParts = Array.isArray(previousBaseline.parts) ? previousBaseline.parts : [];
+  const mergedParts = mergePartsById(remoteProject.parts, localProject.parts, baseParts.map((part) => part.id));
+  if (JSON.stringify(mergedParts.map((part) => part.id)) !== JSON.stringify((localProject.parts || []).map((part) => part.id))) {
+    state.parts = mergedParts.map(normalizePart).filter(Boolean);
     changed = true;
   }
   const nextIndex = state.glyphs.findIndex((glyph) => glyph.char === currentChar);

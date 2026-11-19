@@ -46,6 +46,13 @@ When the app is opened through `node local-server.mjs` or `share.cmd`, edits are
 
 Open the same Cloudflare quick tunnel URL on a phone and desktop to work on the same shared project. A previous server copy is kept at `data/shared-project.backup.json`.
 
+Saving is per glyph, and parts are merged by id, so two people editing different
+characters never overwrite each other. When the app opens it starts from the shared
+copy and lays only this device's unsent edits on top; if someone else changed the
+same glyph meanwhile, the shared version stays and the local one is one undo away.
+Failed saves are retried, and an open app picks up other people's changes within
+about 30 seconds.
+
 Static file usage and Cloudflare Pages without a write API still fall back to browser local storage and manual JSON export/import.
 
 ## AI proposals
