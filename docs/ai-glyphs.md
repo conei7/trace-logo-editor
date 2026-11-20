@@ -112,8 +112,13 @@ variants through these checks and drop or redraw what fails. What each check
 is worth was measured against the hand-made glyphs and the owner's verdicts in
 [ai-glyph-verdicts.json](ai-glyph-verdicts.json).
 
-1. **Real character.** `check --sheet` puts the real glyph beside the variants.
-   Compare joins, crossings and proportions stroke by stroke.
+1. **Real character, real weight.** `check --sheet` puts the real glyph beside
+   the variants and draws them as the app's preview does: strokes about 0.46
+   of a cell wide and no grid, which is how the font is actually read. The
+   owner asked for this; thin lines on a grid hide how close strokes sit and
+   how small a one-row box becomes. Judge, and let critics judge, on these
+   sheets. Add `--grid` only when you need to read exact edges. Compare joins,
+   crossings and proportions stroke by stroke.
 2. **Shape rank.** `score <batch>` ranks each variant against every elementary
    kanji in a system font. Hand-made glyphs come first 60% of the time and in
    the top ten 90%, so a rank beyond ten, or a look-alike listed first (同 for

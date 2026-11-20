@@ -3765,7 +3765,8 @@ function renderProposalPanel() {
   els.proposalNext.disabled = pendingCount <= 1;
   els.proposalAdoptDone.textContent = replacing ? "置き換えて完成" : "採用して完成";
   els.proposalAdopt.textContent = replacing ? "置き換えて直す" : "採用して直す";
-  els.proposalVariants.hidden = item.variants.length < 2;
+  // Shown even for a single variant: the thumbnail is the only view of it at the font's real weight.
+  els.proposalVariants.hidden = false;
   els.proposalVariants.replaceChildren(...item.variants.map((variant, index) => {
     const button = document.createElement("button");
     button.type = "button";

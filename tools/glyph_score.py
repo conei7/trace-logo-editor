@@ -61,8 +61,8 @@ def _normalise(mask, bins=4, sigma=3.5):
 
 
 def render_variant(edges, cell=40, stroke=None, pad=30):
-    """Black-on-white PIL image of a variant, drawn like the app draws it."""
-    stroke = stroke or cell * 0.24
+    """Black-on-white PIL image of a variant at the font's real weight (0.46 of a cell)."""
+    stroke = stroke or cell * 0.46
     size = 4 * cell + pad * 2
     image = Image.new("L", (size, size), 255)
     draw = ImageDraw.Draw(image)

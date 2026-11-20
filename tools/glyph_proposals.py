@@ -338,7 +338,11 @@ def print_ascii(items, per_row=5):
         print()
 
 
-def render_sheet(items, out, cols=10, cell=26, stroke=6):
+def render_sheet(items, out, cols=10, cell=26, stroke=None, grid=False):
+    """Contact sheet. By default glyphs are drawn as the app previews them: at the
+    font's real weight (about 0.46 of a cell) and without the grid, because that is
+    what a reader sees. grid=True gives thin strokes on the grid for reading edges."""
+    stroke = stroke or (cell * 0.23 if grid else cell * 0.46)
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
@@ -369,7 +373,7 @@ def render_sheet(items, out, cols=10, cell=26, stroke=6):
             box = draw.textbbox((0, 0), label[0], font=real)
             draw.text((left + (GRID * cell - (box[2] - box[0])) / 2 - box[0],
                        top + (GRID * cell - (box[3] - box[1])) / 2 - box[1]), label[0], fill=(120, 120, 120), font=real)
-        for i in range(GRID + 1):
+        for i in range(GRID + 1 if grid else 0):
             draw.line([left, top + i * cell, left + GRID * cell, top + i * cell], fill=(225, 225, 225), width=1)
             draw.line([left + i * cell, top, left + i * cell, top + GRID * cell], fill=(225, 225, 225), width=1)
         for edge in edges or []:
@@ -489,7 +493,7 @@ def cmd_strokes(args):
 
 
 def cmd_sheet(args):
-    render_sheet(selected_items(args, load("project.json")), args.out, cols=args.cols)
+    render_sheet(selected_items(args, load("project.json")), args.out, cols=args.cols, grid=args.grid)
 
 
 def cmd_fetch_ids(args):
@@ -569,7 +573,7 @@ def cmd_check(args):
     print_ascii(batch_view_items(payload))
     if args.sheet:
         render_sheet(batch_view_items(payload, with_reference=True), args.sheet, cols=args.cols,
-                     cell=args.cell, stroke=max(4, round(args.cell * 0.23)))
+                     cell=args.cell, grid=args.grid)
     print(f"ok: {len(payload['items'])} characters, {sum(len(i['variants']) for i in payload['items'])} variants")
 
 
@@ -741,6 +745,7 @@ def main():
     add_selection(sheet)
     sheet.add_argument("-o", "--out", required=True)
     sheet.add_argument("--cols", type=int, default=10)
+    sheet.add_argument("--grid", action="store_true", help="thin strokes on the grid instead of the preview look")
     add("fetch-ids", cmd_fetch_ids, "download the kanji decomposition table used by find and study")
     find = add("find", cmd_find, "list kanji that contain a component, by position and progress")
     find.add_argument("components", nargs="+")
@@ -756,6 +761,7 @@ def main():
     check.add_argument("--sheet", help="also render the variants to this PNG")
     check.add_argument("--cols", type=int, default=8)
     check.add_argument("--cell", type=int, default=26, help="cell size in pixels; use 44 or more for a critic")
+    check.add_argument("--grid", action="store_true", help="thin strokes on the grid instead of the preview look")
     score = add("score", cmd_score, "shape rank (and optionally Windows OCR) for every variant of a batch")
     score.add_argument("batch")
     score.add_argument("--ocr", action="store_true", help="also run the Windows Japanese OCR")
