@@ -572,6 +572,36 @@ def cmd_check(args):
     print(f"ok: {len(payload['items'])} characters, {sum(len(i['variants']) for i in payload['items'])} variants")
 
 
+def cmd_score(args):
+    """Legibility signals per variant; see glyph_score.py for what they are worth."""
+    import glyph_score
+    project = load("project.json")
+    payload, _ = expand_batch(json.loads(Path(args.batch).read_text(encoding="utf-8")), project)
+    chars = [glyph["char"] for glyph in project["glyphs"] if glyph.get("folder") == "kanji"]
+    rows = [(item["char"], index + 1, variant["activeEdges"])
+            for item in payload["items"] for index, variant in enumerate(item["variants"])]
+    texts = glyph_score.ocr_rows([edges for _, _, edges in rows]) if args.ocr else None
+    for position, (char, number, edges) in enumerate(rows):
+        rank, similarity, closest = glyph_score.shape_rank(edges, char, chars)
+        line = f"{char}{number}: shape rank {rank} ({similarity:.2f}), closest {closest}"
+        if texts is not None:
+            line += f", OCR {'hit' if char in texts[position] else 'miss'} [{texts[position][:8]}]"
+        print(line + ("  <- check" if rank > 10 else ""))
+
+
+def cmd_blind(args):
+    """Numbered sheet without labels, plus the key, for a reader who must not know the answers."""
+    import random
+    payload, _ = expand_batch(json.loads(Path(args.batch).read_text(encoding="utf-8")), load("project.json"))
+    rows = [(f"{item['char']}{index + 1}", variant["activeEdges"])
+            for item in payload["items"] for index, variant in enumerate(item["variants"])]
+    random.Random(args.seed).shuffle(rows)
+    render_sheet([(f"{number:02d}", edges) for number, (_, edges) in enumerate(rows, 1)], args.out, cols=args.cols)
+    key = Path(args.out).with_suffix(".key.json")
+    key.write_text(json.dumps({f"{number:02d}": label for number, (label, _) in enumerate(rows, 1)}, ensure_ascii=False), encoding="utf-8")
+    print(f"key in {key}; give the reader only the PNG")
+
+
 def cmd_merge(args):
     merged, order = {}, []
     for path in args.inputs:
@@ -637,6 +667,7 @@ def cmd_adopt(args):
 def main():
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8")
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -675,6 +706,14 @@ def main():
     check.add_argument("batch")
     check.add_argument("--sheet", help="also render the variants to this PNG")
     check.add_argument("--cols", type=int, default=8)
+    score = add("score", cmd_score, "shape rank (and optionally Windows OCR) for every variant of a batch")
+    score.add_argument("batch")
+    score.add_argument("--ocr", action="store_true", help="also run the Windows Japanese OCR")
+    blind = add("blind", cmd_blind, "render a shuffled, unlabelled sheet of a batch for a blind reading test")
+    blind.add_argument("batch")
+    blind.add_argument("-o", "--out", required=True)
+    blind.add_argument("--cols", type=int, default=8)
+    blind.add_argument("--seed", type=int, default=1)
     merge = add("merge", cmd_merge, "combine batch files from several authors into one blind batch")
     merge.add_argument("out")
     merge.add_argument("inputs", nargs="+")

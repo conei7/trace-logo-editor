@@ -81,6 +81,36 @@ Two more lessons from the second round:
   The owner picked "left of 2, right of 3" for 印; that combination should
   have been on the table already.
 
+## Review your own work before showing it
+
+The owner should only have to say yes or no. Before showing anything, run the
+variants through these checks and drop or redraw what fails. What each check
+is worth was measured against the hand-made glyphs and the owner's verdicts in
+[ai-glyph-verdicts.json](ai-glyph-verdicts.json).
+
+1. **Real character.** `check --sheet` puts the real glyph beside the variants.
+   Compare joins, crossings and proportions stroke by stroke.
+2. **Shape rank.** `score <batch>` ranks each variant against every elementary
+   kanji in a system font. Hand-made glyphs come first 60% of the time and in
+   the top ten 90%, so a rank beyond ten, or a look-alike listed first (同 for
+   a 岡), means the variant reads as something else. It says nothing about
+   joins or crossings. `--ocr` adds Windows OCR, which read only 15% of the
+   hand-made glyphs: ignore a miss.
+3. **Blind reading.** `blind <batch> -o sheet.png` renders the variants
+   shuffled and unlabelled. Give only the PNG to a fresh agent and ask which
+   kanji each tile is. A vision model read 29 of 30 hand-made glyphs this way,
+   so a miss is a real legibility problem. It also read 7 of 8 variants the
+   owner had rejected, so passing proves little.
+4. **Critic.** Give a fresh agent the `check --sheet` image, the five rejection
+   rules and the verdict file as examples, and ask for the rules each variant
+   breaks and a ranking. In the first test its top choice matched the owner's
+   for 3 of 7 characters, and the owner's choice was in its top three for all
+   7; it put every joined or uncrossed variant near the bottom. Use it to
+   remove bad variants, not to pick the winner.
+5. **Pick.** Choose one variant per character yourself and show that, with the
+   runners-up kept in the review queue. Add each of the owner's verdicts to
+   the verdict file, with their reason, so the examples grow.
+
 ## Loop
 
 ```bash
