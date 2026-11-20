@@ -697,6 +697,19 @@ def cmd_adopt(args):
     print(f"adopted {' '.join(args.picks)} as {'完成' if args.done else '未完成'} on {args.url}")
 
 
+def cmd_finish(args):
+    """Marks glyphs 完成 on the owner's word, leaving their edges as they are."""
+    project = request(f"{args.url}/api/project")
+    glyphs = {glyph["char"]: glyph for glyph in project["glyphs"]}
+    patch = {"glyphs": []}
+    for char in "".join(args.chars):
+        if char not in glyphs or not glyphs[char]["activeEdges"]:
+            fail(f"{char} has no edges to finish")
+        patch["glyphs"].append({**glyphs[char], "status": "完成"})
+    request(f"{args.url}/api/project/patch", patch)
+    print(f"marked 完成 on {args.url}: {''.join(args.chars)}")
+
+
 def main():
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8")
@@ -763,6 +776,10 @@ def main():
     adopt.add_argument("--replace", action="store_true", help="allow replacing a glyph that already has edges")
     adopt.add_argument("--comment", default="", help="the owner's remark, stored with the decision")
     adopt.add_argument("--url", default=DEFAULT_URL)
+
+    finish = add("finish", cmd_finish, "mark glyphs 完成 when the owner says so (writes glyph data)")
+    finish.add_argument("chars", nargs="+")
+    finish.add_argument("--url", default=DEFAULT_URL)
 
     args = parser.parse_args()
     args.handler(args)

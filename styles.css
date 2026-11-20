@@ -708,8 +708,13 @@ button:disabled {
 
 .proposal-chip[hidden],
 .proposal-panel[hidden],
-.proposal-variants[hidden] {
+.proposal-variants[hidden],
+.proposal-panel [hidden] {
   display: none;
+}
+
+.proposal-panel.is-fixing .proposal-actions {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .proposal-panel {

@@ -1191,7 +1191,7 @@ function renderFolderTabs() {
     button.textContent = `${filter.label} ${counts[filter.id] || 0}`;
     fragment.append(button);
   }
-  const pendingCount = pendingProposalIndexes().length;
+  const pendingCount = reviewQueueIndexes().length;
   if (pendingCount > 0 || state.proposalFilter) {
     const button = document.createElement("button");
     button.type = "button";
@@ -1206,7 +1206,7 @@ function renderFolderTabs() {
 function getVisibleGlyphs() {
   const searchChars = new Set(splitGraphemes(state.glyphSearch));
   if (searchChars.size === 0 && state.proposalFilter) {
-    return pendingProposalIndexes().map((index) => ({ glyph: state.glyphs[index], index }));
+    return reviewQueueIndexes().map((index) => ({ glyph: state.glyphs[index], index }));
   }
   return state.glyphs
     .map((glyph, index) => ({ glyph, index }))
@@ -3706,11 +3706,17 @@ function pendingProposalFor(char) {
   return (grid.cols || 4) === GRID_COLS && (grid.rows || 4) === GRID_ROWS ? item : null;
 }
 
-function pendingProposalIndexes() {
+function adoptedUnfinishedProposalFor(glyph) {
+  // Adopted for hand-fixing: stays in the queue until the glyph is marked finished.
+  const item = state.proposals.get(glyph.char);
+  return item && item.status === "adopted" && glyph.status !== "完成" && glyph.activeEdges.size > 0 ? item : null;
+}
+
+function reviewQueueIndexes() {
   const indexes = [];
   if (state.proposals.size === 0) return indexes;
   state.glyphs.forEach((glyph, index) => {
-    if (pendingProposalFor(glyph.char)) indexes.push(index);
+    if (pendingProposalFor(glyph.char) || adoptedUnfinishedProposalFor(glyph)) indexes.push(index);
   });
   return indexes;
 }
@@ -3730,7 +3736,7 @@ function proposalPreviewGlyph(char, variant) {
 }
 
 function renderProposalPanel() {
-  const pendingCount = pendingProposalIndexes().length;
+  const pendingCount = reviewQueueIndexes().length;
   els.proposalJump.hidden = pendingCount === 0 && !state.proposalFilter;
   els.proposalJump.textContent = `AI案 ${pendingCount}`;
   els.proposalJump.classList.toggle("is-active", state.proposalFilter);
@@ -3738,7 +3744,19 @@ function renderProposalPanel() {
 
   const glyph = currentGlyph();
   const item = pendingProposalFor(glyph.char);
-  els.proposalPanel.hidden = !item;
+  const fixing = !item && adoptedUnfinishedProposalFor(glyph);
+  els.proposalPanel.hidden = !item && !fixing;
+  els.proposalAdopt.hidden = !item;
+  els.proposalReject.hidden = !item;
+  els.proposalComment.hidden = !item;
+  els.proposalPanel.classList.toggle("is-fixing", Boolean(fixing));
+  if (fixing) {
+    els.proposalNote.textContent = "採用済み・手直し中";
+    els.proposalNext.disabled = pendingCount <= 1;
+    els.proposalAdoptDone.textContent = "完成にする";
+    els.proposalVariants.hidden = true;
+    return;
+  }
   if (!item) return;
 
   const selected = selectedProposalIndex(item);
@@ -3795,7 +3813,7 @@ function showProposalQueue() {
 }
 
 function goToNextProposal() {
-  const pending = pendingProposalIndexes();
+  const pending = reviewQueueIndexes();
   if (pending.length === 0) {
     state.proposalFilter = false;
     syncAllControls();
@@ -3809,6 +3827,13 @@ function goToNextProposal() {
 function decideProposal(status, markDone) {
   const glyph = currentGlyph();
   const item = pendingProposalFor(glyph.char);
+  if (!item && status === "adopted" && markDone && adoptedUnfinishedProposalFor(glyph)) {
+    withHistory(() => {
+      glyph.status = "完成";
+    }, glyph);
+    goToNextProposal();
+    return;
+  }
   if (!item) return;
   const variant = selectedProposalIndex(item);
 

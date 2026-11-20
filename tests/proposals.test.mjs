@@ -68,13 +68,18 @@ test("decisions record the choice and a new batch keeps the last verdict", () =>
 });
 
 test("the review queue lists pending proposals for the current grid only", () => {
-  const ctx = contextFor(["pendingProposalFor", "pendingProposalIndexes", "getVisibleGlyphs", "applyProposalDecisionLocally"], {
+  const ctx = contextFor(["pendingProposalFor", "adoptedUnfinishedProposalFor", "reviewQueueIndexes", "getVisibleGlyphs", "applyProposalDecisionLocally"], {
     GRID_COLS: 4, GRID_ROWS: 4,
     splitGraphemes: (text) => [...text],
     matchesFolderFilter: () => true, matchesKanjiGrade: () => true,
     state: {
       glyphSearch: "", proposalFilter: true, folderFilter: "all",
-      glyphs: [{ char: "一" }, { char: "路" }, { char: "和" }, { char: "A" }],
+      glyphs: [
+        { char: "一", status: "未完成", activeEdges: new Set() },
+        { char: "路", status: "未完成", activeEdges: new Set() },
+        { char: "和", status: "完成", activeEdges: new Set(["h-0-0"]) },
+        { char: "A", status: "未完成", activeEdges: new Set() }
+      ],
       proposals: new Map([
         ["路", { char: "路", status: "pending", createdAt: "T1", variants: [variant("h-0-0")] }],
         ["和", { char: "和", status: "adopted", variants: [variant("h-0-0")] }],
@@ -88,16 +93,22 @@ test("the review queue lists pending proposals for the current grid only", () =>
   ctx.state.glyphSearch = "";
 
   ctx.applyProposalDecisionLocally(ctx.state.proposals, { char: "路", createdAt: "T0", status: "rejected" });
-  assert.equal(ctx.pendingProposalIndexes().length, 1, "a decision for a replaced proposal is ignored");
+  assert.equal(ctx.reviewQueueIndexes().length, 1, "a decision for a replaced proposal is ignored");
   ctx.applyProposalDecisionLocally(ctx.state.proposals, { char: "路", createdAt: "T1", status: "rejected", variant: null, comment: "" });
-  assert.equal(ctx.pendingProposalIndexes().length, 0);
+  assert.equal(ctx.reviewQueueIndexes().length, 0);
+
+  // Adopted for hand-fixing: the glyph stays in the queue until it is marked finished.
+  ctx.state.glyphs[2].status = "未完成";
+  assert.deepEqual(Array.from(ctx.getVisibleGlyphs(), ({ index }) => index), [2]);
+  ctx.state.glyphs[2].status = "完成";
+  assert.equal(ctx.reviewQueueIndexes().length, 0);
 });
 
 test("adopting writes the chosen variant through glyph history and queues the decision", () => {
   const glyph = { char: "路", status: "未完成", activeEdges: new Set(["v-4-0"]), lockedEdges: new Set(), activePoints: new Set(["p-1-1"]), candidateScores: { x: 1 } };
   const calls = [];
   const queue = [];
-  const ctx = contextFor(["pendingProposalFor", "selectedProposalIndex", "applyProposalDecisionLocally", "decideProposal"], {
+  const ctx = contextFor(["pendingProposalFor", "adoptedUnfinishedProposalFor", "selectedProposalIndex", "applyProposalDecisionLocally", "decideProposal"], {
     GRID_COLS: 4, GRID_ROWS: 4,
     clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
     currentGlyph: () => glyph,
@@ -129,7 +140,9 @@ test("adopting writes the chosen variant through glyph history and queues the de
   assert.deepEqual(calls.map(([name]) => name), ["history", "saved", "flush", "sync", "render"]);
   assert.equal(ctx.pendingProposalFor("路"), null, "a decided proposal leaves the queue at once");
   ctx.decideProposal("adopted", true);
-  assert.equal(queue.length, 1, "nothing happens without a pending proposal");
+  assert.equal(queue.length, 1, "finishing an adopted glyph sends no second decision");
+  assert.equal(glyph.status, "完成", "the finish button marks the hand-fixed glyph finished");
+  assert.equal(calls.at(-1)[0], "next");
 });
 
 test("the proposals API never touches the shared project file", async () => {
