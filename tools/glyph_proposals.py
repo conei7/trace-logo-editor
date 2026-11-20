@@ -627,7 +627,11 @@ def cmd_harvest(args):
         for index, variant in enumerate(item["variants"]):
             entry = {"char": item["char"], "proposal": item.get("createdAt"),
                      "strokes": edges_to_strokes(variant["activeEdges"]), "reason": ""}
-            if item["status"] == "rejected":
+            if item["status"] == "rejected" and item.get("triedVariant") == index:
+                # Adopted for a hand fix, then given up on with やめて却下.
+                entry["verdict"] = "rejected"
+                entry["reason"] = "採用して直そうとしたが直せず却下" + (f"：{item['comment']}" if item.get("comment") else "")
+            elif item["status"] == "rejected":
                 entry["verdict"], entry["reason"] = "rejected", item.get("comment") or "全部だめ"
             elif item.get("chosen") == index:
                 entry["verdict"], entry["reason"] = "adopted", item.get("comment") or ""

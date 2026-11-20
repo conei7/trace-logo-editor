@@ -88,6 +88,42 @@ the finished glyph that contains the same component.
 - 典: both variants rejected. Both lost the separate bar under 曲. Leave it for
   conversation.
 
+Fourth round (g4-g, 32 characters): 20 adopted as drawn, 11 adopted for fixing
+(治 and 唱 were then finished unchanged), 1 rejected (軍). Most fixes again
+copied a component from a finished glyph.
+
+- 法: the owner rebuilt the 厶 hanging from the bottom bar of 土
+  (`32-23; 23-24; 24-44; 43-44`), which is the variant I had removed for
+  joining. 会 and 伝 hang 厶 from the bar above in the same way. **Do not drop a
+  variant for a contact that a finished glyph already has.**
+- 灯: the owner kept both the right stroke of 火 (`13-24`) and the hook of 丁
+  (`24-34`), meeting at one point. Same priority as 固 and 英: keep defining
+  strokes, accept the touch. Offer that variant next time.
+- 連: rebuilt with the 車 of 庫: bar `20-40`, box `21-41-42-22` with a V inside
+  (`21-32; 41-32`), bar `23-43`, vertical `30-34` from the top bar down to the
+  bottom of ⻌. A blind reader had taken a similar shape for 運; the owner
+  still wants the 庫 form. Copy the finished component first and treat the
+  blind reading as a warning, not a veto.
+- 失: the vertical runs to `23` and the legs are one-cell diagonals with
+  horizontal tails (`23-14-04`, `23-34-44`). 欠 got the same legs last round,
+  and 見 東 楽 交 園 already use them. **Legs that start on row 3 end in tails
+  along the bottom**; long diagonals from row 2 (夫 大 天) are for legs that
+  start at a bar on row 2.
+- 令: the bar under the roof joins both roof legs (`11-31`); 卩 is `12-32`,
+  `32-33`, `23-33` with the vertical `22-24`.
+- 底: 氐 got the top stroke `21-31-40` up to the end of the 广 bar, a left
+  vertical to the bottom (`21-24`), a bottom bar `14-34` under it and the flick
+  `24-33`.
+- 的: 勺 is a long ノ `30-12` that touches 白, a bar `21-41` starting from the
+  middle of the ノ, the vertical `41-44` with hook `34-44`, and the dot `32-33`.
+- 伝: the short top bar of 云 is still two cells (`21-41`).
+- 児: 儿 hangs one row below 日 (`23-14`; `33-34-44-43`), not from it.
+- 軍: both variants rejected. Retry with the 車 of 庫 under 冖.
+
+When a hand fix fails, the owner can now press `やめて却下` in the app: the
+glyph goes back to what it held before adoption and the proposal becomes
+rejected with `triedVariant` set. `harvest` records it as a rejection.
+
 ## Target
 
 The owner's goal is 常用漢字 (2,136) plus 人名用漢字 and the rest of JIS level
