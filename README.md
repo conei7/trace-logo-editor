@@ -60,7 +60,10 @@ Static file usage and Cloudflare Pages without a write API still fall back to br
 Kanji can be drafted by an AI agent and reviewed in the app. Proposals are kept in
 `data/proposals.json`, apart from the shared project, and only change a glyph when a
 person adopts one. Pending proposals appear as an `AI案` chip and list tab; the review
-panel offers adopt-and-finish, adopt-and-edit and reject with a comment.
+panel offers adopt-and-finish, adopt-and-edit and reject with a comment. A glyph
+adopted for editing stays in the queue until it is marked finished; if the fix does
+not work out, `やめて却下` puts back what the glyph held before adoption and rejects
+the proposal.
 
 Agents follow [docs/ai-glyphs.md](docs/ai-glyphs.md) and use
 `python tools/glyph_proposals.py` to study finished glyphs, check a batch and send it
