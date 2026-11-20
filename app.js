@@ -3747,16 +3747,18 @@ function renderProposalPanel() {
   const fixing = !item && adoptedUnfinishedProposalFor(glyph);
   els.proposalPanel.hidden = !item && !fixing;
   els.proposalAdopt.hidden = !item;
-  els.proposalReject.hidden = !item;
-  els.proposalComment.hidden = !item;
+  els.proposalReject.hidden = !item && !fixing;
+  els.proposalComment.hidden = !item && !fixing;
   els.proposalPanel.classList.toggle("is-fixing", Boolean(fixing));
   if (fixing) {
     els.proposalNote.textContent = "採用済み・手直し中";
     els.proposalNext.disabled = pendingCount <= 1;
     els.proposalAdoptDone.textContent = "完成にする";
+    els.proposalReject.textContent = "やめて却下";
     els.proposalVariants.hidden = true;
     return;
   }
+  els.proposalReject.textContent = "却下";
   if (!item) return;
 
   const selected = selectedProposalIndex(item);
@@ -3835,8 +3837,13 @@ function decideProposal(status, markDone) {
     goToNextProposal();
     return;
   }
+  if (!item && status === "rejected" && adoptedUnfinishedProposalFor(glyph)) {
+    giveUpAdoptedProposal(glyph);
+    return;
+  }
   if (!item) return;
   const variant = selectedProposalIndex(item);
+  const replacedEdges = status === "adopted" ? [...glyph.activeEdges] : [];
 
   if (status === "adopted") {
     const edges = item.variants[variant].activeEdges.filter((id) => isAllowedEdgeIdForGlyph(id, glyph));
@@ -3858,11 +3865,8 @@ function decideProposal(status, markDone) {
     comment: els.proposalComment.value.trim(),
     decidedAt: new Date().toISOString()
   };
-  applyProposalDecisionLocally(state.proposals, decision);
-  queuedProposalDecisions().push(decision);
-  saveQueuedProposalDecisions();
-  flushProposalDecisions();
-  els.proposalComment.value = "";
+  if (replacedEdges.length > 0) decision.replacedEdges = replacedEdges;
+  sendProposalDecision(decision);
 
   if (status === "adopted" && !markDone) {
     syncAllControls();
@@ -3872,16 +3876,55 @@ function decideProposal(status, markDone) {
   goToNextProposal();
 }
 
+function giveUpAdoptedProposal(glyph) {
+  // The hand fix did not work out: put back what the glyph held before adoption and reject.
+  const item = adoptedUnfinishedProposalFor(glyph);
+  if (!item) return;
+  if (!window.confirm(`「${glyph.char}」の手直し中の形を消して、AI案を却下しますか？`)) return;
+  const restored = (Array.isArray(item.replacedEdges) ? item.replacedEdges : [])
+    .filter((id) => isAllowedEdgeIdForGlyph(id, glyph));
+  withHistory(() => {
+    glyph.activeEdges = new Set(restored);
+    glyph.lockedEdges = new Set(restored);
+    glyph.activePoints = new Set();
+    glyph.candidateScores = {};
+    glyph.status = "未完成";
+  }, glyph);
+  sendProposalDecision({
+    char: item.char,
+    createdAt: item.createdAt || null,
+    status: "rejected",
+    variant: null,
+    final: false,
+    comment: els.proposalComment.value.trim(),
+    decidedAt: new Date().toISOString()
+  });
+  goToNextProposal();
+}
+
+function sendProposalDecision(decision) {
+  applyProposalDecisionLocally(state.proposals, decision);
+  queuedProposalDecisions().push(decision);
+  saveQueuedProposalDecisions();
+  flushProposalDecisions();
+  els.proposalComment.value = "";
+}
+
 function applyProposalDecisionLocally(items, decision) {
   const item = items.get(decision.char);
-  if (!item || item.status !== "pending" || (item.createdAt || null) !== (decision.createdAt || null)) return;
-  items.set(decision.char, {
+  if (!item || (item.createdAt || null) !== (decision.createdAt || null)) return;
+  const givingUp = item.status === "adopted" && decision.status === "rejected";
+  if (item.status !== "pending" && !givingUp) return;
+  const next = {
     ...item,
     status: decision.status,
     chosen: decision.variant,
     comment: decision.comment,
     decidedAt: decision.decidedAt
-  });
+  };
+  if (Array.isArray(decision.replacedEdges)) next.replacedEdges = decision.replacedEdges;
+  if (givingUp && Number.isInteger(item.chosen)) next.triedVariant = item.chosen;
+  items.set(decision.char, next);
 }
 
 function queuedProposalDecisions() {

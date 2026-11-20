@@ -88,7 +88,19 @@ export function applyProposalDecision(current, body, now = new Date().toISOStrin
     }
     item.chosen = chosen;
     item.final = Boolean(body.final);
+    // What the glyph held before adoption, so a later "give up and reject" can put it back.
+    const grid = item.grid || {};
+    const replaced = Array.isArray(body.replacedEdges)
+      ? [...new Set(body.replacedEdges.filter((id) => isValidEdgeId(id, gridSize(grid.cols), gridSize(grid.rows))))]
+      : [];
+    if (replaced.length > 0) item.replacedEdges = replaced;
+    else delete item.replacedEdges;
+    delete item.triedVariant;
   } else {
+    // Rejecting after adoption keeps which variant was tried, for the record.
+    if (body.status === "rejected" && item.status === "adopted" && Number.isInteger(item.chosen)) {
+      item.triedVariant = item.chosen;
+    }
     item.chosen = null;
     delete item.final;
   }
