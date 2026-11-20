@@ -297,9 +297,8 @@ def expand_batch(batch, project):
         for variant in variants:
             for name in variant["source"].split("+"):
                 authors[name] = authors.get(name, 0) + 1
-        crowded = [name or "this batch" for name, count in authors.items() if count > 3]
-        if crowded:
-            warnings.append(f"{char}: more than three variants from {', '.join(crowded)}; keep the best three")
+        if len(variants) > 8:
+            warnings.append(f"{char}: the review queue holds at most eight variants")
         items.append({"char": char, "note": item.get("note", ""), "grid": {"cols": GRID, "rows": GRID}, "variants": variants})
     if not items:
         fail("batch has no items")
@@ -359,15 +358,21 @@ def render_sheet(items, out, cols=10, cell=26, stroke=6):
             font = ImageFont.truetype(candidate, 18 * scale)
             break
     half = stroke / 2
+    real = ImageFont.truetype(font.path, int(GRID * cell * 0.92)) if font else None
     for index, (label, edges) in enumerate(items):
         left, top = (index % cols) * tile_w + pad, (index // cols) * tile_h
         if font:
             draw.text((left, top + 2 * scale), label, fill=(200, 60, 40), font=font)
         top += label_height + pad
+        if edges is None and real:
+            # Reference tile: the real character, to check which strokes touch and cross.
+            box = draw.textbbox((0, 0), label[0], font=real)
+            draw.text((left + (GRID * cell - (box[2] - box[0])) / 2 - box[0],
+                       top + (GRID * cell - (box[3] - box[1])) / 2 - box[1]), label[0], fill=(120, 120, 120), font=real)
         for i in range(GRID + 1):
             draw.line([left, top + i * cell, left + GRID * cell, top + i * cell], fill=(225, 225, 225), width=1)
             draw.line([left + i * cell, top, left + i * cell, top + GRID * cell], fill=(225, 225, 225), width=1)
-        for edge in edges:
+        for edge in edges or []:
             x1, y1, x2, y2 = edge_points(edge)
             ax, ay, bx, by = left + x1 * cell, top + y1 * cell, left + x2 * cell, top + y2 * cell
             length = math.hypot(bx - ax, by - ay)
@@ -381,9 +386,11 @@ def render_sheet(items, out, cols=10, cell=26, stroke=6):
     print(f"wrote {out} ({len(items)} glyphs)")
 
 
-def batch_view_items(payload, show_source=False):
+def batch_view_items(payload, show_source=False, with_reference=False):
     items = []
     for item in payload["items"]:
+        if with_reference:
+            items.append((f"{item['char']} 実物", None))
         for index, variant in enumerate(item["variants"]):
             label = f"{item['char']}{index + 1}"
             if show_source and variant.get("source"):
@@ -561,7 +568,7 @@ def cmd_check(args):
         print("warning:", warning)
     print_ascii(batch_view_items(payload))
     if args.sheet:
-        render_sheet(batch_view_items(payload), args.sheet, cols=args.cols)
+        render_sheet(batch_view_items(payload, with_reference=True), args.sheet, cols=args.cols)
     print(f"ok: {len(payload['items'])} characters, {sum(len(i['variants']) for i in payload['items'])} variants")
 
 

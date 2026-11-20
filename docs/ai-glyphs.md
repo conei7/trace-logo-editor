@@ -67,6 +67,20 @@ From the first conversational round. These outrank the house style below.
 When all candidates are weak the owner says so and names the least bad one;
 treat that as a direction, not as approval.
 
+Two more lessons from the second round:
+
+- **Look at the real character before drawing.** `check --sheet` puts the real
+  glyph next to the variants. Do not rely on memory for which strokes touch,
+  cross or stick out: 岡's 山 does join the bar above it, the right-falling
+  stroke of 夂 does cross the left-falling one and both run long, and the
+  vertical of 央 does stick out above its frame. Leaving out a real join or
+  crossing is as wrong as adding a false one.
+- **Offer many variants.** Three is too few. Work out the independent choices
+  (how long the left side is, where the right side starts, which line a bar
+  sits on) and offer the combinations, six to eight when the character allows.
+  The owner picked "left of 2, right of 3" for 印; that combination should
+  have been on the table already.
+
 ## Loop
 
 ```bash
@@ -131,9 +145,8 @@ and `40-04` is the full diagonal. There are no dots and no curves.
 - `source`: who drew it. The app hides it so the review stays blind.
 - `note`: one short line in Japanese; the reviewer reads it in the app next to
   the variant. Say what the variant gave up or how it differs from the others.
-- One to three variants per character. Explore as many as you like, then keep
-  the best; offer more than one only when they are real alternatives a reviewer
-  could prefer, not noise.
+- Up to eight variants per character. Offer the combinations of the real
+  choices; leave out only what is plainly broken.
 
 ## House style
 
