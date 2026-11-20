@@ -16,10 +16,10 @@ file is the brief for the agent: read it fully before designing anything.
 
 ## Working mode for now
 
-The owner wants glyphs made in small batches, about six characters at a time,
-not in bulk. Draw six to eight variants per character, weed them yourself (see
-"Review your own work"), queue the best three or four and tell the owner which
-characters are waiting. They choose in the app. Settle how recurring components
+The owner wants glyphs made in batches that grow while the adoption rate holds
+(see "Target"), not in bulk. Draw six to eight variants per character, weed
+them yourself (see "Review your own work"), queue the best three or four (one
+or two for a simple character) and tell the owner which characters are waiting. They choose in the app. Settle how recurring components
 are drawn as they come up and record it under "Decisions so far".
 Batch generation, including the two-model comparison below, waits for an
 explicit request. In the first trial, characters with four stacked layers
@@ -63,6 +63,30 @@ explicit request. In the first trial, characters with four stacked layers
   stroke at a grid point. A crossing can use a kinked stroke when a straight
   one does not fit.
 - 共, 札: adopted as drawn (札 uses the same hook as 礼).
+
+Third round (g4-f, 20 characters reviewed in the app): 16 adopted as drawn, 3
+adopted and fixed by hand, 1 rejected. Each fix restored something the
+finished glyphs already do, so run `study` and copy hooks and proportions from
+the finished glyph that contains the same component.
+
+- 材: the bar of 木 and the bar of 才 joined into one line (`01-41`), as in 村,
+  was chosen over a separate 才.
+- 官: the owner dropped the dot of 宀 and moved the roof to the top
+  (`00-40; 00-01; 40-41`) so both boxes of 㠯 get room (`11-31-32-12`,
+  `13-43-44-14`). 室 宮 実 do the same. **When the part under 宀 needs four
+  rows, drop the dot instead of squashing boxes into slits.**
+- 氏: the last stroke ends with an upward tick `43-44`, as the 氏 in 紙 does.
+- 欠: redrawn as bar `11-41` with a hook down to the left from its right end
+  (`41-32`), stem `21-23`, and legs `23-14-04` and `23-34-44` that end in short
+  horizontals. 次 and 歌 also keep a hook at the right end of the bar.
+- 岡: after adoption the owner redrew the inside: 丷 as `10-21; 30-21`, bar
+  `11-31`, 山 hanging from the bar (`21-23; 12-13; 32-33; 13-33`), and the hook
+  of 冂 (`34-44`). Every 冂 in the finished glyphs (同 円 内 用 司) has that
+  hook, and house style rule 7 says so; the proposal missed it.
+- 塩: the bottom bar of 皿 sticks out past the box (`14-44`), as in 皿 温 血.
+- 緑: the owner joined two diagonals into one long stroke `11-44`.
+- 典: both variants rejected. Both lost the separate bar under 曲. Leave it for
+  conversation.
 
 ## Target
 
@@ -262,8 +286,8 @@ These come from the finished glyphs. Always confirm against the real data
    boxes; that is accepted.
 6. Left- and right-falling strokes are 45 degree diagonals. Legs of 木 大 人
    run from a centre point to the bottom corners.
-7. A hook is one cell: `44-34` at the bottom of a right vertical (刂 月 円), or a
-   one-cell upturn for 乚.
+7. A hook is one cell: `44-34` at the bottom of a right vertical (刂 月 円, and
+   every 冂), or a one-cell upturn for 乚 and the end of 氏 (`43-44`).
 8. Density is fine, but strokes touch or cross only where the real character
    does. Avoid two parallel
    diagonals one cell apart when one belongs to the radical and one to the right
