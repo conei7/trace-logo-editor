@@ -50,6 +50,29 @@ explicit request. In the first trial, characters with four stacked layers
   asked to see a full-width 田 and then chose the narrow one (x = 1..3): try
   what they suggest, but let them judge the rendering.
 
+- 固: the vertical of 十 keeps its stub above the bar even though it then
+  touches the frame; the variant that dropped the stub lost. Together with 英
+  this gives a priority: **keeping a stroke that defines the character beats
+  avoiding a touch.** Avoid contact by moving things, not by deleting strokes.
+- 完: 元's left leg starts one column out (`13-04`), so the legs stand apart.
+- 功: 工 sits one row down (`01-21; 11-13; 03-23`) and 力's bar is on y = 2, as
+  in the real proportions; the version with 工 at the very top lost.
+- 好: adopted, then the owner widened 子's top bar to two cells (`20-40`).
+- 路: adopted, then the owner redrew the right-falling stroke of 夂 as
+  `30-31-42`, a short vertical and a diagonal, so it crosses the left-falling
+  stroke at a grid point. A crossing can use a kinked stroke when a straight
+  one does not fit.
+- 共, 札: adopted as drawn (札 uses the same hook as 礼).
+
+## Target
+
+The owner's goal is 常用漢字 (2,136) plus 人名用漢字 and the rest of JIS level
+1, roughly 3,300 to 3,500 characters; JIS level 2 is undecided. Order:
+elementary school, the rest of 常用, 人名用, the rest of level 1. Batches grow
+as the adoption rate holds: 20 to 30 characters for now, then 50, then 100.
+Characters with too many stacked layers for the grid (愛, 億) are left out of
+batches and done in conversation at the end.
+
 ## What the owner rejects outright
 
 From the first conversational round. These outrank the house style below.
