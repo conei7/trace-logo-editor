@@ -119,7 +119,12 @@ is worth was measured against the hand-made glyphs and the owner's verdicts in
    the top ten 90%, so a rank beyond ten, or a look-alike listed first (同 for
    a 岡), means the variant reads as something else. It says nothing about
    joins or crossings. `--ocr` adds Windows OCR, which read only 15% of the
-   hand-made glyphs: ignore a miss.
+   hand-made glyphs: ignore a miss. `score` also counts how many lines a scan
+   crosses and prints `MORE lines than the real one` when the variant has more
+   than the real character. That caught a 臣 with an invented middle bar, which
+   had passed two visual checks and a critic. About one hand-made glyph in six
+   trips it because of diagonals, so treat it as "count the strokes again in
+   the real glyph", and never queue a flagged variant without doing so.
 3. **Blind reading.** `blind <batch> -o sheet.png` renders the variants
    shuffled and unlabelled. Give only the PNG to a fresh agent and ask which
    kanji each tile is. A vision model read 29 of 30 hand-made glyphs this way,
@@ -138,7 +143,10 @@ is worth was measured against the hand-made glyphs and the owner's verdicts in
    disagree about the real character, render that character alone and large
    and look again: for 臣 the critic was right and the first drafts were wrong
    (the inner box hangs from the left vertical and short verticals tie it to
-   the top and bottom bars), while for 氏 and 民 it misread the drafts.
+   the top and bottom bars), while for 氏 and 民 it misread the drafts. Even
+   then the redrawn 臣 gained a bar that does not exist, from miscounting the
+   enlarged image; the owner caught it. Count bars against the `MORE` check,
+   not by eye alone.
 5. **Queue three or four.** Put the survivors in the review queue, best first.
    The owner weeds in the app: adopt and finish, adopt and fix by hand, or
    reject all with a remark. Showing a single pick and asking yes or no was

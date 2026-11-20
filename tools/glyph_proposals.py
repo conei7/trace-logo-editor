@@ -587,7 +587,10 @@ def cmd_score(args):
         line = f"{char}{number}: shape rank {rank} ({similarity:.2f}), closest {closest}"
         if texts is not None:
             line += f", OCR {'hit' if char in texts[position] else 'miss'} [{texts[position][:8]}]"
-        print(line + ("  <- check" if rank > 10 else ""))
+        more_h, more_v = glyph_score.extra_strokes(edges, char)
+        if more_h > 0 or more_v > 0:
+            line += f", MORE lines than the real one (横 {more_h:+d}, 縦 {more_v:+d})"
+        print(line + ("  <- check" if rank > 10 or more_h > 0 or more_v > 0 else ""))
 
 
 def cmd_blind(args):

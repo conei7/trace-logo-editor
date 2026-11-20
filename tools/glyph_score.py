@@ -10,6 +10,12 @@ Two independent signals, both judged against the real character:
 - OCR: Windows' Japanese OCR reads a row of the variant. It recognised only 15%
   of the hand-made glyphs, so a miss means little and a hit is a bonus.
 
+- stroke count: the most strokes any vertical or horizontal scan line crosses,
+  for the variant and for the real character. A variant that crosses MORE than
+  the real one probably has a line the character does not have (the first 臣
+  had an invented middle bar). Diagonals inflate the count, so 17% of the
+  hand-made glyphs trip it too: it means "look again", not "wrong".
+
 Needs numpy, OpenCV and Pillow. OCR needs Windows with the Japanese language.
 """
 import os
@@ -98,6 +104,37 @@ def template_matrix(chars):
         raise RuntimeError("no reference font found for the shape rank")
     _templates[key] = blocks
     return blocks
+
+
+def _stroke_counts(mask):
+    ys, xs = np.nonzero(mask)
+    crop = mask[ys.min():ys.max() + 1, xs.min():xs.max() + 1].astype(np.uint8) * 255
+    grid = cv2.resize(crop, (96, 96), interpolation=cv2.INTER_AREA) > 100
+
+    def runs(line):
+        count = length = 0
+        for value in list(line) + [False]:
+            if value:
+                length += 1
+            else:
+                count += length >= 3
+                length = 0
+        return count
+
+    lines = [int(fraction * 95) for fraction in np.linspace(0.08, 0.92, 15)]
+    return max(runs(grid[:, x]) for x in lines), max(runs(grid[y, :]) for y in lines)
+
+
+def extra_strokes(edges, target):
+    """(extra horizontal, extra vertical) crossings compared with the real character; negatives are omissions."""
+    font = next((path for path in FONTS if os.path.exists(path)), None)
+    if not font:
+        return 0, 0
+    image = Image.new("L", (280, 280), 255)
+    ImageDraw.Draw(image).text((30, 10), target, fill=0, font=ImageFont.truetype(font, 200))
+    real = _stroke_counts(np.array(image) < 128)
+    mine = _stroke_counts(np.array(render_variant(edges, cell=40, stroke=14)) < 128)
+    return mine[0] - real[0], mine[1] - real[1]
 
 
 def shape_rank(edges, target, chars):
