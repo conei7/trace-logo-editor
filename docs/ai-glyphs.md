@@ -120,6 +120,14 @@ copied a component from a finished glyph.
 - 児: 儿 hangs one row below 日 (`23-14`; `33-34-44-43`), not from it.
 - 軍: both variants rejected. Retry with the 車 of 庫 under 冖.
 
+Batch g5-a (34 characters) was picked differently: only characters whose
+every top-level component already appears, in the same position, in a finished
+glyph, and each component was copied from that glyph. The blind reader read 40
+of 43. Its three misses are worth remembering: 季 without the legs of 禾 read
+as 孝, 支 with the vertical of 十 stopping at the bar read as 文, and 攵 with a
+vertical tick above its bar read as 支 (枚 as 枝); drawing the first stroke of
+攵 as a diagonal onto the bar fixed it.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
