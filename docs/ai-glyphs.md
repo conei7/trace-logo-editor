@@ -134,6 +134,11 @@ is worth was measured against the hand-made glyphs and the owner's verdicts in
    (`check --sheet … --cell 44 --cols 5`): at the default size it misreads
    single-cell details, and every concrete claim it makes has to be checked
    against the strokes before acting on it.
+   Split a batch of twenty into two sheets of ten. When the critic and you
+   disagree about the real character, render that character alone and large
+   and look again: for 臣 the critic was right and the first drafts were wrong
+   (the inner box hangs from the left vertical and short verticals tie it to
+   the top and bottom bars), while for 氏 and 民 it misread the drafts.
 5. **Queue three or four.** Put the survivors in the review queue, best first.
    The owner weeds in the app: adopt and finish, adopt and fix by hand, or
    reject all with a remark. Showing a single pick and asking yes or no was
