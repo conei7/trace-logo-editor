@@ -147,7 +147,9 @@ is worth was measured against the hand-made glyphs and the owner's verdicts in
    kanji in a system font. Hand-made glyphs come first 60% of the time and in
    the top ten 90%, so a rank beyond ten, or a look-alike listed first (同 for
    a 岡), means the variant reads as something else. It says nothing about
-   joins or crossings. `--ocr` adds Windows OCR, which read only 15% of the
+   joins or crossings. Characters with 氵 rank badly even when the owner drew
+   them (温 226, 汽 160, 泳 139, 漢 107), so for those lean on the blind
+   reading instead. `--ocr` adds Windows OCR, which read only 15% of the
    hand-made glyphs: ignore a miss. `score` also counts how many lines a scan
    crosses and prints `MORE lines than the real one` when the variant has more
    than the real character. That caught a 臣 with an invented middle bar, which
@@ -158,7 +160,11 @@ is worth was measured against the hand-made glyphs and the owner's verdicts in
    shuffled and unlabelled. Give only the PNG to a fresh agent and ask which
    kanji each tile is. A vision model read 29 of 30 hand-made glyphs this way,
    so a miss is a real legibility problem. It also read 7 of 8 variants the
-   owner had rejected, so passing proves little.
+   owner had rejected, so passing proves little. In batch g4-g it read 50 of
+   52; both misses were 連 read as 運, because the top bar of 車 sat on the top
+   row and looked like the roof of 冖. Letting the vertical of 車 stick out
+   above its top bar (as 庫 does) fixed it. Large batches go in two sheets of
+   about 26 tiles at `cell` 34.
 4. **Critic.** Give a fresh agent the `check --sheet` image, the five rejection
    rules and the verdict file as examples, and ask for the rules each variant
    breaks and a ranking. In the first test its top choice matched the owner's
