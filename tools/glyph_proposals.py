@@ -676,9 +676,9 @@ def cmd_push(args):
     print(f"sent {len(result.get('chars', []))} proposals to {args.url}: {''.join(result.get('chars', []))}")
 
 
-def review_left(url):
+def review_left(url, doc=None):
     """Characters still waiting in the app's AI queue: pending, or adopted and not yet finished."""
-    proposals = request(f"{url}/api/proposals").get("items", {})
+    proposals = (doc or request(f"{url}/api/proposals")).get("items", {})
     pending = [char for char, item in proposals.items() if item.get("status") == "pending"]
     if pending:
         return pending
@@ -689,12 +689,18 @@ def review_left(url):
 
 
 def cmd_wait(args):
-    """Polls the shared server and exits once the owner has worked through the whole AI queue."""
+    """Polls the shared server and exits once the owner has worked through the whole AI queue,
+    or has pressed 次の組を頼む in the app (an unhandled request, printed with its note)."""
     import time
     last = None
     while True:
         try:
-            left = review_left(args.url)
+            doc = request(f"{args.url}/api/proposals")
+            asked = doc.get("request") or {}
+            if asked.get("requestedAt") and not asked.get("handledAt"):
+                print(f"requested in the app at {asked['requestedAt']}: {asked.get('note') or '(no note)'}", flush=True)
+                return
+            left = review_left(args.url, doc)
         except SystemExit as error:  # request() exits on network errors; keep waiting instead
             print(f"server not reached ({error}); retrying", flush=True)
             time.sleep(args.every)
@@ -815,8 +821,8 @@ def main():
     push.add_argument("batch")
     push.add_argument("--url", default=DEFAULT_URL)
 
-    wait = add("wait", cmd_wait, "wait until the owner has reviewed every proposal, then exit")
-    wait.add_argument("--every", type=int, default=180, help="seconds between checks")
+    wait = add("wait", cmd_wait, "wait until the owner has reviewed every proposal or asked for more, then exit")
+    wait.add_argument("--every", type=int, default=60, help="seconds between checks")
     wait.add_argument("--url", default=DEFAULT_URL)
 
     adopt = add("adopt", cmd_adopt, "apply variants the owner chose in conversation (writes glyph data)")

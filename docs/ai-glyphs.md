@@ -256,11 +256,14 @@ python tools/glyph_proposals.py wait                 # blocks until the owner ha
 
 The owner reviews on the phone and cannot message the session from there, so
 the standing go-ahead is: after pushing a batch, start `wait` in the
-background (it checks the server every 3 minutes and survives network errors).
-When it exits, the queue is empty: pull, harvest, record what the decisions
-teach, draw the next batch, review it, push it, and start `wait` again. A
-character left undecided in the app keeps `wait` waiting; that is the owner's
-way to pause the loop.
+background (it checks the server every minute and survives network errors).
+It exits when the queue is empty, or when the owner presses 次の組を頼む in the
+app's AIへの依頼 box; then it prints the owner's note, which is an instruction
+for this round (batch size, characters to do, anything else). Pull, harvest,
+record what the decisions teach, draw the next batch, review it, push it (that
+marks the request handled), and start `wait` again. A character left
+undecided in the app keeps `wait` waiting unless the owner sends a request;
+that is the owner's way to pause the loop.
 
 The full `--done` sheet is too large to study closely; use it for the overall
 feel, then render named subsets (`sheet 立 倍 暗 新 -o …`) of glyphs that share a

@@ -36,6 +36,13 @@
 
       <div id="charList" class="char-list" aria-label="文字一覧"></div>
 
+      <section id="aiRequestPanel" class="section-block ai-request" aria-label="AIへの依頼" hidden>
+        <div class="section-title">AIへの依頼</div>
+        <p id="aiRequestStatus" class="note-line" role="status"></p>
+        <input id="aiRequestNote" type="text" maxlength="400" placeholder="一言（任意）例：次は50字で" aria-label="AIへの依頼メモ" autocomplete="off" enterkeyhint="send">
+        <button id="aiRequestSend" class="primary-button" type="button">次の組を頼む</button>
+      </section>
+
       <section class="section-block">
         <div class="section-title">文字セット</div>
         <textarea id="charSetInput" rows="10" spellcheck="false"></textarea>

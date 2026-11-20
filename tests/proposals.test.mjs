@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { applyProposalBatch, applyProposalDecision, emptyProposalDoc, isValidEdgeId } from "../proposals.mjs";
+import { applyProposalBatch, applyProposalDecision, applyProposalRequest, emptyProposalDoc, isValidEdgeId, normalizeProposalDoc } from "../proposals.mjs";
 
 const source = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 function contextFor(names, globals) {
@@ -68,6 +68,20 @@ test("decisions record the choice and a new batch keeps the last verdict", () =>
   assert.equal(doc.items["路"].status, "pending");
   assert.equal(doc.items["路"].previous.comment, "右が重い");
   assert.equal(doc.items["路"].previous.status, "rejected");
+});
+
+test("a request from the app waits until the next batch arrives", () => {
+  let doc = applyProposalRequest(emptyProposalDoc(), { note: "  次は50字で  " }, "T1");
+  assert.deepEqual(doc.request, { requestedAt: "T1", note: "次は50字で", handledAt: null });
+  assert.equal(doc.revision, 1);
+  assert.deepEqual(normalizeProposalDoc(JSON.parse(JSON.stringify(doc))).request, doc.request, "the request survives a reload");
+  doc = applyProposalRequest(doc, {}, "T2");
+  assert.deepEqual(doc.request, { requestedAt: "T2", note: "", handledAt: null }, "a newer request replaces the older one");
+  ({ doc } = applyProposalBatch(doc, batch([{ char: "路", variants: [variant("h-0-0")] }]), "T3"));
+  assert.equal(doc.request.handledAt, "T3", "pushing a batch handles the request");
+  ({ doc } = applyProposalBatch(doc, batch([{ char: "道", variants: [variant("h-0-0")] }]), "T4"));
+  assert.equal(doc.request.handledAt, "T3", "a handled request keeps its time");
+  assert.equal(normalizeProposalDoc({ items: {} }).request, undefined);
 });
 
 test("the review queue lists pending proposals for the current grid only", () => {

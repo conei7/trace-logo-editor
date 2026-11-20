@@ -171,6 +171,9 @@ const state = {
   customFonts: [],
   parts: [],
   proposals: new Map(),
+  proposalsReachable: false,
+  proposalRequest: null,
+  aiRequestError: "",
   proposalFilter: false,
   proposalChar: null,
   proposalVariant: 0,
@@ -226,6 +229,10 @@ const els = {
   proposalAdoptDone: document.getElementById("proposalAdoptDone"),
   proposalAdopt: document.getElementById("proposalAdopt"),
   proposalReject: document.getElementById("proposalReject"),
+  aiRequestPanel: document.getElementById("aiRequestPanel"),
+  aiRequestStatus: document.getElementById("aiRequestStatus"),
+  aiRequestNote: document.getElementById("aiRequestNote"),
+  aiRequestSend: document.getElementById("aiRequestSend"),
   canvas: document.getElementById("editorCanvas"),
   previewCanvas: document.getElementById("previewCanvas"),
   previewText: document.getElementById("previewText"),
@@ -634,6 +641,10 @@ function bindEvents() {
   els.proposalAdoptDone.addEventListener("click", () => decideProposal("adopted", true));
   els.proposalAdopt.addEventListener("click", () => decideProposal("adopted", false));
   els.proposalReject.addEventListener("click", () => decideProposal("rejected", false));
+  els.aiRequestSend.addEventListener("click", sendAiRequest);
+  els.aiRequestNote.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.isComposing) sendAiRequest();
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     refreshRemoteProject();
@@ -3735,7 +3746,46 @@ function proposalPreviewGlyph(char, variant) {
   return { char, activeEdges: edges, lockedEdges: edges, activePoints: new Set() };
 }
 
+function renderAiRequest() {
+  els.aiRequestPanel.hidden = !state.proposalsReachable;
+  if (!state.proposalsReachable) return;
+  const request = state.proposalRequest;
+  const when = (iso) => new Date(iso).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  let text = "レビューが全部終わると、頼まなくても次の組が作られます。";
+  if (request && !request.handledAt) {
+    text = `${when(request.requestedAt)}に依頼済み。AIが1分以内に気づき、作り終えると「AI案」に入ります。`;
+  } else if (request) {
+    text = `${when(request.requestedAt)}の依頼は${when(request.handledAt)}に対応済み。`;
+  }
+  els.aiRequestStatus.textContent = state.aiRequestError || text;
+  els.aiRequestSend.textContent = request && !request.handledAt ? "依頼を送り直す" : "次の組を頼む";
+}
+
+async function sendAiRequest() {
+  if (els.aiRequestSend.disabled) return;
+  els.aiRequestSend.disabled = true;
+  try {
+    const response = await fetch(`${REMOTE_PROPOSALS_ENDPOINT}/request`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ note: els.aiRequestNote.value.trim() })
+    });
+    if (!response.ok || response.headers.get("x-trace-logo-api") !== "1") throw new Error(`HTTP ${response.status}`);
+    const result = await response.json();
+    state.proposalRequest = (result.proposals && result.proposals.request) || null;
+    state.aiRequestError = "";
+    els.aiRequestNote.value = "";
+  } catch (error) {
+    console.warn("AI request was not sent", error);
+    state.aiRequestError = "送れませんでした。通信を確かめてもう一度押してください。";
+  } finally {
+    els.aiRequestSend.disabled = false;
+    renderAiRequest();
+  }
+}
+
 function renderProposalPanel() {
+  renderAiRequest();
   const pendingCount = reviewQueueIndexes().length;
   els.proposalJump.hidden = pendingCount === 0 && !state.proposalFilter;
   els.proposalJump.textContent = `AI案 ${pendingCount}`;
@@ -3986,6 +4036,8 @@ async function loadProposals() {
     }
     for (const decision of queuedProposalDecisions()) applyProposalDecisionLocally(items, decision);
     state.proposals = items;
+    state.proposalsReachable = true;
+    state.proposalRequest = (data && data.request) || null;
     renderAll();
   } catch {
     // Reviewing proposals needs the shared server; editing keeps working without it.

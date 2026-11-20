@@ -713,6 +713,19 @@ button:disabled {
   display: none;
 }
 
+.ai-request {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-request[hidden] {
+  display: none;
+}
+
+.ai-request .note-line {
+  margin: 0;
+}
+
 .proposal-panel.is-fixing .proposal-actions {
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
 }

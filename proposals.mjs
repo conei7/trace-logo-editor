@@ -26,7 +26,23 @@ export function normalizeProposalDoc(raw) {
       }
     }
   }
+  const request = raw.request;
+  if (request && typeof request === "object" && typeof request.requestedAt === "string") {
+    doc.request = {
+      requestedAt: request.requestedAt,
+      note: typeof request.note === "string" ? request.note : "",
+      handledAt: typeof request.handledAt === "string" ? request.handledAt : null
+    };
+  }
   return doc;
+}
+
+// The owner asks the agent for the next batch from the app (the agent's session cannot be
+// reached from the phone). A newer request replaces an older one; pushing a batch handles it.
+export function applyProposalRequest(current, body, now = new Date().toISOString()) {
+  const doc = cloneDoc(current);
+  doc.request = { requestedAt: now, note: cleanText(body && body.note), handledAt: null };
+  return stamp(doc, now);
 }
 
 export function isValidEdgeId(id, cols, rows) {
@@ -67,6 +83,7 @@ export function applyProposalBatch(current, body, now = new Date().toISOString()
     doc.items[item.char] = item;
     chars.push(item.char);
   }
+  if (doc.request && !doc.request.handledAt) doc.request.handledAt = now;
   return { doc: stamp(doc, now), chars };
 }
 

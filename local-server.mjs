@@ -5,7 +5,7 @@ import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildOpenTypeFont } from "./font-export.mjs";
 import { mergeProject } from "./project-merge.mjs";
-import { applyProposalBatch, applyProposalDecision, normalizeProposalDoc } from "./proposals.mjs";
+import { applyProposalBatch, applyProposalDecision, applyProposalRequest, normalizeProposalDoc } from "./proposals.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)));
 const port = Number(process.argv[2] || process.env.PORT || 8787);
@@ -202,7 +202,9 @@ async function handleProposalsApi(request, response, action) {
       const current = await readProposals();
       const applied = action === "decide"
         ? { doc: applyProposalDecision(current, body) }
-        : applyProposalBatch(current, body);
+        : action === "request"
+          ? { doc: applyProposalRequest(current, body) }
+          : applyProposalBatch(current, body);
       await writeProposals(applied.doc);
       return applied;
     });
@@ -275,8 +277,8 @@ const server = createServer((request, response) => {
     return;
   }
 
-  if (requestPath === "/api/proposals" || requestPath === "/api/proposals/decide") {
-    handleProposalsApi(request, response, requestPath.endsWith("/decide") ? "decide" : "");
+  if (requestPath === "/api/proposals" || requestPath === "/api/proposals/decide" || requestPath === "/api/proposals/request") {
+    handleProposalsApi(request, response, requestPath.split("/")[3] || "");
     return;
   }
 
