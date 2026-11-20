@@ -16,10 +16,11 @@ file is the brief for the agent: read it fully before designing anything.
 
 ## Working mode for now
 
-The owner wants glyphs made in conversation first, not in bulk. Take a few
-characters at a time, show the candidates as images in the chat, let the owner
-choose, and settle how recurring components are drawn as they come up. Record
-each decision under "Decisions so far" so the next session starts from it.
+The owner wants glyphs made in small batches, about six characters at a time,
+not in bulk. Draw six to eight variants per character, weed them yourself (see
+"Review your own work"), queue the best three or four and tell the owner which
+characters are waiting. They choose in the app. Settle how recurring components
+are drawn as they come up and record it under "Decisions so far".
 Batch generation, including the two-model comparison below, waits for an
 explicit request. In the first trial, characters with four stacked layers
 (愛) were judged not good enough to delegate.
@@ -106,10 +107,19 @@ is worth was measured against the hand-made glyphs and the owner's verdicts in
    breaks and a ranking. In the first test its top choice matched the owner's
    for 3 of 7 characters, and the owner's choice was in its top three for all
    7; it put every joined or uncrossed variant near the bottom. Use it to
-   remove bad variants, not to pick the winner.
-5. **Pick.** Choose one variant per character yourself and show that, with the
-   runners-up kept in the review queue. Add each of the owner's verdicts to
-   the verdict file, with their reason, so the examples grow.
+   remove bad variants, not to pick the winner. Render its sheet large
+   (`check --sheet … --cell 44 --cols 5`): at the default size it misreads
+   single-cell details, and every concrete claim it makes has to be checked
+   against the strokes before acting on it.
+5. **Queue three or four.** Put the survivors in the review queue, best first.
+   The owner weeds in the app: adopt and finish, adopt and fix by hand, or
+   reject all with a remark. Showing a single pick and asking yes or no was
+   considered and dropped, because the owner's choice is reliably among the
+   top three but is the first pick only about half the time.
+6. **Harvest.** Before the next batch run `pull` and then `harvest`. It copies
+   each decision into the verdict file: the adopted variant, what it was edited
+   to afterwards (`edited_to`), and the variants that lost. Read the new
+   entries, above all the hand edits, before drawing again.
 
 ## Loop
 

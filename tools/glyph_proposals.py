@@ -568,7 +568,8 @@ def cmd_check(args):
         print("warning:", warning)
     print_ascii(batch_view_items(payload))
     if args.sheet:
-        render_sheet(batch_view_items(payload, with_reference=True), args.sheet, cols=args.cols)
+        render_sheet(batch_view_items(payload, with_reference=True), args.sheet, cols=args.cols,
+                     cell=args.cell, stroke=max(4, round(args.cell * 0.23)))
     print(f"ok: {len(payload['items'])} characters, {sum(len(i['variants']) for i in payload['items'])} variants")
 
 
@@ -600,6 +601,38 @@ def cmd_blind(args):
     key = Path(args.out).with_suffix(".key.json")
     key.write_text(json.dumps({f"{number:02d}": label for number, (label, _) in enumerate(rows, 1)}, ensure_ascii=False), encoding="utf-8")
     print(f"key in {key}; give the reader only the PNG")
+
+
+def cmd_harvest(args):
+    """Copies decisions made in the app into the verdict file, once per proposal."""
+    path = ROOT / "docs" / "ai-glyph-verdicts.json"
+    log = json.loads(path.read_text(encoding="utf-8"))
+    seen = {(entry["char"], entry.get("proposal")) for entry in log["verdicts"]}
+    project, proposals = load("project.json"), load("proposals.json")
+    glyphs = {glyph["char"]: glyph for glyph in project["glyphs"]}
+    added = 0
+    for item in proposals.get("items", {}).values():
+        if item["status"] == "pending" or (item["char"], item.get("createdAt")) in seen:
+            continue
+        # Choices made in conversation are written to the file by hand, with the owner's words.
+        if (item.get("comment") or "").startswith("会話で選択"):
+            continue
+        for index, variant in enumerate(item["variants"]):
+            entry = {"char": item["char"], "proposal": item.get("createdAt"),
+                     "strokes": edges_to_strokes(variant["activeEdges"]), "reason": ""}
+            if item["status"] == "rejected":
+                entry["verdict"], entry["reason"] = "rejected", item.get("comment") or "全部だめ"
+            elif item.get("chosen") == index:
+                entry["verdict"], entry["reason"] = "adopted", item.get("comment") or ""
+                now = glyphs.get(item["char"], {}).get("activeEdges", [])
+                if set(now) != set(variant["activeEdges"]):
+                    entry["edited_to"] = edges_to_strokes(now)
+            else:
+                entry["verdict"], entry["reason"] = "rejected", "選ばれず"
+            log["verdicts"].append(entry)
+            added += 1
+    path.write_text(json.dumps(log, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(f"added {added} verdicts to {path}")
 
 
 def cmd_merge(args):
@@ -706,6 +739,7 @@ def main():
     check.add_argument("batch")
     check.add_argument("--sheet", help="also render the variants to this PNG")
     check.add_argument("--cols", type=int, default=8)
+    check.add_argument("--cell", type=int, default=26, help="cell size in pixels; use 44 or more for a critic")
     score = add("score", cmd_score, "shape rank (and optionally Windows OCR) for every variant of a batch")
     score.add_argument("batch")
     score.add_argument("--ocr", action="store_true", help="also run the Windows Japanese OCR")
@@ -714,6 +748,7 @@ def main():
     blind.add_argument("-o", "--out", required=True)
     blind.add_argument("--cols", type=int, default=8)
     blind.add_argument("--seed", type=int, default=1)
+    add("harvest", cmd_harvest, "copy the app's decisions and hand edits into docs/ai-glyph-verdicts.json")
     merge = add("merge", cmd_merge, "combine batch files from several authors into one blind batch")
     merge.add_argument("out")
     merge.add_argument("inputs", nargs="+")
