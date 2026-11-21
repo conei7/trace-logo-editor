@@ -244,6 +244,14 @@ Batch g5-e (6 characters, 8 variants): 精 (料's 米 with 晴's 青), 奈, 閉,
 elementary kanji whose parts can be copied is nearly used up; most of the
 roughly 380 untouched ones have three or more stacked parts.
 
+g5-e: all 6 adopted; 精 改 囲 as drawn. The fixes:
+
+- 奈: the legs of 大 run long (`21-03; 21-43`) through the ends of 示's first
+  bar, and 示 gets its hook `14-24`.
+- 閉: 才 inside 門 is a bar `13-33`, a vertical `22-24` and a ノ `23-14`.
+- 系: a shorter top `10-30`, 幺 as `20-11; 11-22; 21-12; 31-42`, and no
+  `34-44`.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
