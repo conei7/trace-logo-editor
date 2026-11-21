@@ -157,6 +157,36 @@ have edges unless `--replace` is given for a redraw the owner asked for.
 Always take candidates from `feasible`-style lists of untouched glyphs, never
 from memory.
 
+Sixth round (g5-b, 49 characters): all adopted, 31 as drawn, 18 fixed, 0
+rejected. 老 from g5-a was finished unchanged after `AI案に戻す`. The fixes:
+
+- 関: the owner put back the diagonals of 門 (`00-11; 40-31`), so 丷 became the
+  long lines `00-22; 40-22`. **Keep 門 as in 間 開 even when its diagonals line
+  up with what hangs below.**
+- 責: a 貝 squeezed into one row is a box with a V inside (`12-23; 32-23`) and
+  the stub legs of 貝 itself (`04-14; 34-44`), not diagonal legs.
+- 腸: the bottom of 日 joins the middle bar of 月 (`02-42`) and 勿 keeps all
+  three diagonals (`32-14; 33-24; 43-34`), as in 場.
+- 紅: 工 beside 糸 stands on the base line (`21-41; 31-34; 24-44`).
+- 納: 人 inside a narrow 内 hangs from a vertical `30-32` with legs
+  `32-23; 32-43` to the walls.
+- 除: 余 on the right is roof `30-21; 30-41`, bars `21-41; 22-42`, vertical
+  `31-34` and the two dots as short verticals `23-24; 43-44`.
+- 判: 丷 of 半 is two short verticals (`00-01; 20-21`) beside a vertical from
+  the top.
+- 若: the ノ of 右 starts with a stub from the bar above (`21-22-04`).
+- 念: 今 keeps its own bar `11-31` under the roof as well as `12-32`.
+- 因: 大 inside 囗 keeps the stub up to the frame (`20-22`).
+- 圧: 厂 here is `10-40; 10-13; 13-04`, starting one column in, like 广.
+- 史: 口 on rows 1..2 (`11-31; 12-32; 11-12; 31-32`) with the vertical `20-23`
+  through it, ノ `23-14`, and the right-falling stroke `12-34-44`.
+- 在: 土 sits low (`23-43; 32-34; 24-44`).
+- 宅: 乇 is ノ `31-22`, short bar `12-22`, long bar `03-43`, vertical `22-24`
+  and `24-44`.
+- 忘 別: shorter bars (`12-32` under 亡, `12-22` for 力).
+- 易: the first stroke of 勿 runs from the left edge (`03-43; 03-04`).
+- 特: 牜 is `10-01-02` with its bar `12-42` joining the second bar of 寺.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
