@@ -193,6 +193,25 @@ three or more stacked parts. It leans on the fixes of g5-b (則's 貝, 特's 牜
 在's 𠂇, 枚's 攵). The blind reader read 23 of 25. Dropped: 異 (田 with its
 sides run down into 共 read as 典 or 具). Kept with a warning: 牧 read as 救.
 
+Fixes from g5-c decided before the owner asked for the next batch (the rest
+was still under review):
+
+- 牧: 牜 has no lower bar of its own: `10-01-02`, bar `01-21` joined to 攵,
+  vertical `10-14` and the rising stroke `22-04`.
+- 祝: 兄 is 口 on rows 0..2 with 儿 hanging from it: right leg `32-34-44-43`,
+  left leg `33-24`.
+- 乱: 千 is `20-11`, short bar `01-11`, bar `02-22`, vertical `11-13`; 口 sits
+  on rows 3..4.
+- 再: 冂 is narrowed to x = 1..3 (`11-31; 11-14; 31-34`, hook `24-34`) so the
+  long bar `03-43` sticks out on both sides.
+- 任: 壬 keeps the tail of its ノ (`40-31; 21-31`), like 千.
+- 布: 巾 sits centred under ナ: `12-32; 12-13; 32-33` with the vertical `20-24`
+  from the top.
+- 単: the top is three strokes (`00-11; 10-21; 40-31`), and 田 keeps two rows.
+- 仏: both variants rejected (厶 drawn as an L with a diagonal into the corner).
+  The finished 公 会 雲 draw 厶 as ノ, bar and a short vertical at the right
+  end (`22-13; 13-14; 14-34; 33-34`); use that.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
