@@ -281,6 +281,10 @@ g6-a (first dense batch): all 20 adopted, 8 as drawn (覚 管 器 営 往 保 �
 - 松: the right stroke of 八 is a short vertical `41-42`.
 - 省: 少 keeps its long ノ `30-03` across the top; 目 sits on rows 2..4.
 
+Batch g6-b (14 dense characters): 芽 賀 希 景 菜 笑 置 票 厚 査 災 述 堂 党,
+drawn with the g6-a lessons from the start (one-row 日 with a V, legs of 木
+running through the part below as in 奈). The blind reader read all 14.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
