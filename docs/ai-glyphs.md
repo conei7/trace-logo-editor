@@ -187,6 +187,12 @@ rejected. 老 from g5-a was finished unchanged after `AI案に戻す`. The fixes
 - 易: the first stroke of 勿 runs from the left edge (`03-43; 03-04`).
 - 特: 牜 is `10-01-02` with its bar `12-42` joining the second bar of 寺.
 
+Batch g5-c (21 characters, 24 variants) is smaller on purpose: few
+untouched characters are left whose parts can be copied, and the rest have
+three or more stacked parts. It leans on the fixes of g5-b (則's 貝, 特's 牜,
+在's 𠂇, 枚's 攵). The blind reader read 23 of 25. Dropped: 異 (田 with its
+sides run down into 共 read as 典 or 具). Kept with a warning: 牧 read as 救.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
