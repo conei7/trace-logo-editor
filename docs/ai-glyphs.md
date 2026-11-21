@@ -239,6 +239,11 @@ Rounds g5-c and g5-d finished: of 36 characters, 16 were adopted as drawn,
 - 周: rejected, "looks like 固 or 同". A 同 with one more stroke is too close.
 - 異: rejected, "probably impossible". Leave it.
 
+Batch g5-e (6 characters, 8 variants): 精 (料's 米 with 晴's 青), 奈, 閉,
+改, 囲 and 系. The blind reader read all 8, 閉 included this time. The pool of
+elementary kanji whose parts can be copied is nearly used up; most of the
+roughly 380 untouched ones have three or more stacked parts.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
