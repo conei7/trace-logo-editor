@@ -381,6 +381,14 @@ marks the request handled), and start `wait` again. A character left
 undecided in the app keeps `wait` waiting unless the owner sends a request;
 that is the owner's way to pause the loop.
 
+**Do not ask the owner anything in the conversation.** The point of the loop
+is that the owner works only in the app; a question in the chat stalls it.
+When a choice comes up, make it, and say what was chosen in the variant
+`note` the owner sees in the app (offer both sides as variants when it is a
+real trade-off). Hard characters are not optional either: every kanji in the
+project has to be drawn sooner or later, so when the easy ones run out, move
+on to the dense ones with bold omissions rather than stopping to ask.
+
 The full `--done` sheet is too large to study closely; use it for the overall
 feel, then render named subsets (`sheet 立 倍 暗 新 -o …`) of glyphs that share a
 component with your target. `check --sheet` accepts `--cols` too.
