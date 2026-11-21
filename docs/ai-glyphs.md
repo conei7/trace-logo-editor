@@ -212,6 +212,11 @@ was still under review):
   The finished 公 会 雲 draw 厶 as ノ, bar and a short vertical at the right
   end (`22-13; 13-14; 14-34; 33-34`); use that.
 
+Batch g5-d (15 characters, 18 variants) answered a request from the app
+sent while g5-c was still being reviewed. The blind reader read all 18. 仏 is
+retried with the 厶 of 公; a large 厶 (an L with a tick) read as 化, so it stays
+small in the lower right.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
