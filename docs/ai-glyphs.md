@@ -217,6 +217,28 @@ sent while g5-c was still being reviewed. The blind reader read all 18. 仏 is
 retried with the 厶 of 公; a large 厶 (an L with a tick) read as 化, so it stays
 small in the lower right.
 
+Rounds g5-c and g5-d finished: of 36 characters, 16 were adopted as drawn,
+17 fixed and 3 rejected (仏 in g5-c, then 周 and 異). The fixes:
+
+- 背: 北 is `00-10; 10-11; 01-11` on the left and `30-31; 31-41; 40-31` on the
+  right; 月 below starts at `12-32`.
+- 宝: the bottom bar of 玉 is the full width `04-44`.
+- 弁: 厶 is drawn with the house 厶 laid flat on top (`10-01; 01-41; 40-41`) and
+  廾 has its verticals cross the bar (`11-13-04; 31-34`).
+- 株: the legs of 朱 start at the second bar (`32-23; 32-43`).
+- 久: the first ノ runs to the edge (`20-02`).
+- 永: a flat dot `10-20`, a short bar `11-21` into the top of the vertical,
+  `02-22` then `22-04` on the left, and 水's crossing pair on the right.
+- 仏 私: 厶 starts with a vertical `30-32` above its ノ
+  (`30-32-23-24-44; 43-44`).
+- 冊: four verticals under a bar `00-30`, the long bar `02-42` and a hook
+  `23-34`.
+- 料: 米 on the left is a V into the vertical (`00-11; 20-11`), bar `02-22`
+  and legs from its crossing (`12-03; 12-23`); 斗 is 科's with the vertical at
+  x = 3.
+- 周: rejected, "looks like 固 or 同". A 同 with one more stroke is too close.
+- 異: rejected, "probably impossible". Leave it.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
