@@ -258,6 +258,29 @@ built from finished parts (the top of 学 労, 都's 阝, 球's 求, 念's 今, 
 with bold omissions. The blind reader read 19 of 20; 覚 with 目 cut down to
 口 read as 党, so 目 got its middle bar back before sending.
 
+g6-a (first dense batch): all 20 adopted, 8 as drawn (覚 管 器 営 往 保 灰 並),
+12 fixed, 0 rejected. Dense characters work. The fixes:
+
+- **A 日 or 目 squeezed into one row gets a V inside** (`11-22; 31-22` style),
+  as in 胃 and 責: the owner added it to 皇, 宣 and 借. Do it from the start.
+- 害: 丰 is `11-31; 12-32` plus the long bar `03-43` that is also the top of
+  口, with the vertical `20-23` from the roof down.
+- 舎: the vertical of 干 runs from the roof's apex (`20-22`) to a long bar
+  `02-42`; 口 below is separate.
+- 皇: 白 is ノ `20-11` and a one-row box with a V; its bottom runs out as the
+  first bar of 王 (`02-42`).
+- 借: 龷 is two bars `11-41; 12-42` crossed by `20-22; 30-32`; 日 is one row
+  with a V.
+- 求: like 水 under a bar: `01-12` and `13-04` on the left, `41-32` and
+  `22-44` on the right, dot `30-41`.
+- 漁: 𠂊 on top of 魚 is `30-40; 30-21; 40-31`, and 灬 keeps four dots.
+- 郡: 君's middle bar joins 阝 (`01-31`) and 阝 closes its lower bulge
+  (`32-43-34`).
+- 茨: the left stroke of 欠 runs down to `23`.
+- 佐: the ノ of ナ is two cells (`31-13`) and crosses the top of 工.
+- 松: the right stroke of 八 is a short vertical `41-42`.
+- 省: 少 keeps its long ノ `30-03` across the top; 目 sits on rows 2..4.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
