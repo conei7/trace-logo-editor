@@ -252,6 +252,12 @@ g5-e: all 6 adopted; 精 改 囲 as drawn. The fixes:
 - 系: a shorter top `10-30`, 幺 as `20-11; 11-22; 21-12; 31-42`, and no
   `34-44`.
 
+Batch g6-a (20 characters) starts on the dense ones, as the owner asked:
+茨 害 覚 管 器 求 漁 郡 営 舎 往 保 灰 皇 宣 並 佐 借 松 省, one variant each,
+built from finished parts (the top of 学 労, 都's 阝, 球's 求, 念's 今, 圧's 厂)
+with bold omissions. The blind reader read 19 of 20; 覚 with 目 cut down to
+口 read as 党, so 目 got its middle bar back before sending.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
