@@ -684,8 +684,7 @@ def review_left(url, doc=None):
         return pending
     adopted = [char for char, item in proposals.items() if item.get("status") == "adopted"]
     glyphs = {glyph["char"]: glyph for glyph in request(f"{url}/api/project")["glyphs"]}
-    return [char for char in adopted
-            if glyphs.get(char, {}).get("status") != "完成" and glyphs.get(char, {}).get("activeEdges")]
+    return [char for char in adopted if glyphs.get(char, {}).get("status") != "完成"]
 
 
 def cmd_wait(args):

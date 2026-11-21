@@ -61,7 +61,8 @@ Kanji can be drafted by an AI agent and reviewed in the app. Proposals are kept 
 `data/proposals.json`, apart from the shared project, and only change a glyph when a
 person adopts one. Pending proposals appear as an `AI案` chip and list tab; the review
 panel offers adopt-and-finish, adopt-and-edit and reject with a comment. A glyph
-adopted for editing stays in the queue until it is marked finished; if the fix does
+adopted for editing stays in the queue until it is marked finished, even if every line
+is erased. `AI案に戻す` starts the fix over from the adopted shape, and if the fix does
 not work out, `やめて却下` puts back what the glyph held before adoption and rejects
 the proposal.
 

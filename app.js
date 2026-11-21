@@ -3718,9 +3718,15 @@ function pendingProposalFor(char) {
 }
 
 function adoptedUnfinishedProposalFor(glyph) {
-  // Adopted for hand-fixing: stays in the queue until the glyph is marked finished.
+  // Adopted for hand-fixing: stays in the queue until the glyph is marked finished or given up,
+  // even when every line has been erased, so the reviewer can still bring the AI shape back.
   const item = state.proposals.get(glyph.char);
-  return item && item.status === "adopted" && glyph.status !== "完成" && glyph.activeEdges.size > 0 ? item : null;
+  return item && item.status === "adopted" && glyph.status !== "完成" ? item : null;
+}
+
+function adoptedVariantEdges(item, glyph) {
+  const variant = Number.isInteger(item.chosen) && Array.isArray(item.variants) ? item.variants[item.chosen] : null;
+  return variant ? variant.activeEdges.filter((id) => isAllowedEdgeIdForGlyph(id, glyph)) : null;
 }
 
 function reviewQueueIndexes() {
@@ -3796,7 +3802,8 @@ function renderProposalPanel() {
   const item = pendingProposalFor(glyph.char);
   const fixing = !item && adoptedUnfinishedProposalFor(glyph);
   els.proposalPanel.hidden = !item && !fixing;
-  els.proposalAdopt.hidden = !item;
+  els.proposalAdopt.hidden = !item && !(fixing && adoptedVariantEdges(fixing, glyph));
+  els.proposalAdoptDone.disabled = Boolean(fixing) && glyph.activeEdges.size === 0;
   els.proposalReject.hidden = !item && !fixing;
   els.proposalComment.hidden = !item && !fixing;
   els.proposalPanel.classList.toggle("is-fixing", Boolean(fixing));
@@ -3804,6 +3811,7 @@ function renderProposalPanel() {
     els.proposalNote.textContent = "採用済み・手直し中";
     els.proposalNext.disabled = pendingCount <= 1;
     els.proposalAdoptDone.textContent = "完成にする";
+    els.proposalAdopt.textContent = "AI案に戻す";
     els.proposalReject.textContent = "やめて却下";
     els.proposalVariants.hidden = true;
     return;
@@ -3880,7 +3888,12 @@ function goToNextProposal() {
 function decideProposal(status, markDone) {
   const glyph = currentGlyph();
   const item = pendingProposalFor(glyph.char);
+  if (!item && status === "adopted" && !markDone && adoptedUnfinishedProposalFor(glyph)) {
+    restoreAdoptedProposal(glyph);
+    return;
+  }
   if (!item && status === "adopted" && markDone && adoptedUnfinishedProposalFor(glyph)) {
+    if (glyph.activeEdges.size === 0) return;
     withHistory(() => {
       glyph.status = "完成";
     }, glyph);
@@ -3924,6 +3937,23 @@ function decideProposal(status, markDone) {
     return;
   }
   goToNextProposal();
+}
+
+function restoreAdoptedProposal(glyph) {
+  // The hand fix went astray: start over from the adopted AI shape. Undo brings the fix back.
+  const item = adoptedUnfinishedProposalFor(glyph);
+  const edges = item && adoptedVariantEdges(item, glyph);
+  if (!edges) return;
+  if (glyph.activeEdges.size > 0 && !window.confirm(`「${glyph.char}」の手直しを消して、採用したAI案の形に戻しますか？`)) return;
+  withHistory(() => {
+    glyph.activeEdges = new Set(edges);
+    glyph.lockedEdges = new Set(edges);
+    glyph.activePoints = new Set();
+    glyph.candidateScores = {};
+    glyph.status = "未完成";
+  }, glyph);
+  syncAllControls();
+  renderAll();
 }
 
 function giveUpAdoptedProposal(glyph) {

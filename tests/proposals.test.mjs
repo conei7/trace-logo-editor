@@ -117,6 +117,8 @@ test("the review queue lists pending proposals for the current grid only", () =>
   // Adopted for hand-fixing: the glyph stays in the queue until it is marked finished.
   ctx.state.glyphs[2].status = "未完成";
   assert.deepEqual(Array.from(ctx.getVisibleGlyphs(), ({ index }) => index), [2]);
+  ctx.state.glyphs[2].activeEdges = new Set();
+  assert.deepEqual(Array.from(ctx.getVisibleGlyphs(), ({ index }) => index), [2], "erasing every line keeps it in the queue");
   ctx.state.glyphs[2].status = "完成";
   assert.equal(ctx.reviewQueueIndexes().length, 0);
 });
@@ -125,7 +127,7 @@ test("adopting writes the chosen variant through glyph history and queues the de
   const glyph = { char: "路", status: "未完成", activeEdges: new Set(["v-4-0"]), lockedEdges: new Set(), activePoints: new Set(["p-1-1"]), candidateScores: { x: 1 } };
   const calls = [];
   const queue = [];
-  const ctx = contextFor(["pendingProposalFor", "adoptedUnfinishedProposalFor", "selectedProposalIndex", "applyProposalDecisionLocally", "sendProposalDecision", "giveUpAdoptedProposal", "decideProposal"], {
+  const ctx = contextFor(["pendingProposalFor", "adoptedUnfinishedProposalFor", "adoptedVariantEdges", "selectedProposalIndex", "applyProposalDecisionLocally", "sendProposalDecision", "restoreAdoptedProposal", "giveUpAdoptedProposal", "decideProposal"], {
     GRID_COLS: 4, GRID_ROWS: 4,
     clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
     currentGlyph: () => glyph,
@@ -169,7 +171,7 @@ test("giving up on a hand fix puts the glyph back and rejects the proposal", () 
   const history = [];
   let answer = false;
   const els = { proposalComment: { value: "" } };
-  const ctx = contextFor(["pendingProposalFor", "adoptedUnfinishedProposalFor", "selectedProposalIndex", "applyProposalDecisionLocally", "sendProposalDecision", "giveUpAdoptedProposal", "decideProposal"], {
+  const ctx = contextFor(["pendingProposalFor", "adoptedUnfinishedProposalFor", "adoptedVariantEdges", "selectedProposalIndex", "applyProposalDecisionLocally", "sendProposalDecision", "restoreAdoptedProposal", "giveUpAdoptedProposal", "decideProposal"], {
     GRID_COLS: 4, GRID_ROWS: 4,
     clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
     currentGlyph: () => glyph,
@@ -210,6 +212,47 @@ test("giving up on a hand fix puts the glyph back and rejects the proposal", () 
   assert.equal(item.status, "rejected");
   assert.equal(item.triedVariant, 0);
   assert.equal(ctx.adoptedUnfinishedProposalFor(glyph), null, "the glyph leaves the review queue");
+});
+
+test("a hand fix can start over from the adopted AI shape, even after erasing every line", () => {
+  const glyph = { char: "老", status: "未完成", activeEdges: new Set(), lockedEdges: new Set(), activePoints: new Set(), candidateScores: {} };
+  const queue = [];
+  const history = [];
+  let answer = false;
+  const ctx = contextFor(["pendingProposalFor", "adoptedUnfinishedProposalFor", "adoptedVariantEdges", "selectedProposalIndex", "applyProposalDecisionLocally", "sendProposalDecision", "restoreAdoptedProposal", "giveUpAdoptedProposal", "decideProposal"], {
+    GRID_COLS: 4, GRID_ROWS: 4,
+    clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
+    currentGlyph: () => glyph,
+    isAllowedEdgeIdForGlyph: (id) => id !== "h-9-9",
+    withHistory: (fn, target) => { history.push(target.char); fn(); },
+    queuedProposalDecisions: () => queue,
+    saveQueuedProposalDecisions: () => {},
+    flushProposalDecisions: () => {},
+    goToNextProposal: () => {},
+    syncAllControls: () => {},
+    renderAll: () => {},
+    window: { confirm: () => answer },
+    els: { proposalComment: { value: "" } },
+    state: {
+      proposalChar: "老", proposalVariant: 0,
+      proposals: new Map([["老", { char: "老", status: "adopted", chosen: 1, createdAt: "T1", variants: [variant("h-0-0"), variant("h-1-1", "h-9-9", "v-2-0")] }]])
+    }
+  });
+
+  ctx.decideProposal("adopted", true);
+  assert.equal(glyph.status, "未完成", "an empty glyph cannot be marked finished");
+  ctx.decideProposal("adopted", false);
+  assert.deepEqual([...glyph.activeEdges], ["h-1-1", "v-2-0"], "the adopted variant comes back without asking");
+  assert.deepEqual([...glyph.lockedEdges], ["h-1-1", "v-2-0"]);
+  glyph.activeEdges.add("h-3-3");
+  ctx.decideProposal("adopted", false);
+  assert.equal(glyph.activeEdges.has("h-3-3"), true, "a hand fix is kept when the reviewer cancels");
+  answer = true;
+  ctx.decideProposal("adopted", false);
+  assert.deepEqual([...glyph.activeEdges], ["h-1-1", "v-2-0"]);
+  assert.deepEqual(history, ["老", "老"], "each restore goes through undo history");
+  assert.equal(queue.length, 0, "restoring sends no decision");
+  assert.equal(ctx.state.proposals.get("老").status, "adopted");
 });
 
 test("the proposals API never touches the shared project file", async () => {
