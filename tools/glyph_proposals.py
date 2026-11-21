@@ -672,6 +672,12 @@ def cmd_push(args):
     payload, warnings = expand_batch(json.loads(Path(args.batch).read_text(encoding="utf-8")), project)
     for warning in warnings:
         print("warning:", warning)
+    # A proposal for a glyph someone already drew asks the owner to replace their work;
+    # only send it when the owner asked for a redraw.
+    glyphs = {glyph["char"]: glyph for glyph in project["glyphs"]}
+    drawn = [item["char"] for item in payload["items"] if glyphs[item["char"]]["activeEdges"]]
+    if drawn and not args.replace:
+        fail(f"{''.join(drawn)} already have edges on the server; drop them or pass --replace if the owner asked for a redraw")
     result = request(f"{args.url}/api/proposals", payload)
     print(f"sent {len(result.get('chars', []))} proposals to {args.url}: {''.join(result.get('chars', []))}")
 
@@ -818,6 +824,7 @@ def main():
     merge.add_argument("--name", help="batch name (defaults to the output file name)")
     push = add("push", cmd_push, "send a batch to the review queue (proposals only)")
     push.add_argument("batch")
+    push.add_argument("--replace", action="store_true", help="also send characters that already have edges")
     push.add_argument("--url", default=DEFAULT_URL)
 
     wait = add("wait", cmd_wait, "wait until the owner has reviewed every proposal or asked for more, then exit")

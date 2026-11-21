@@ -143,6 +143,20 @@ the fixing panel; fixed with `AI案に戻す`). 軍 passed with the 車 of 庫 u
 - 胃: a 田 squeezed into one row gets the V `10-21-30` inside, so it does not
   read as 皿 or 罒.
 
+Batch g5-b (49 characters, 61 variants) grew the batch as planned. Only eight
+untouched characters had every component finished in the same position, so
+most of the rest copy one side from a finished glyph and squeeze the other
+into two columns; a few simple standalone characters (己 寸 示 干 尺 亡 史 非)
+fill it out. The blind reader read 61 of 66. Dropped before sending: 閉 (both
+variants read as 附 or 防; the 門 with a narrow 才 inside splits into 阝 and
+寸), 紅 with 工 on rows 1..3 (read as 結) and 責 with stub legs (read as 建).
+Kept with a warning: 納 read as 約, because 内 has one column inside.
+句 went out by mistake although it was already 完成; it was withdrawn at once
+by rejecting it with a note, and `push` now refuses characters that already
+have edges unless `--replace` is given for a redraw the owner asked for.
+Always take candidates from `feasible`-style lists of untouched glyphs, never
+from memory.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
