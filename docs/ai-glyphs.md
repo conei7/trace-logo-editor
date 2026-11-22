@@ -366,6 +366,13 @@ First g7 decisions (健 岐 種 賃 順; g6-f was all adopted meanwhile):
 - 種: 重 starts with a ノ off a short top bar (`30-40; 30-21`).
 - 賃: rejected without a comment (任 over a squeezed 貝).
 
+Batches g8-e to g8-m (72 characters, about 80 variants) were drawn overnight
+by nine subagents, eight characters each, each pushing its own file as soon
+as it passed `check` (no blind reading). This covers the rest of grade 4,
+including 愛 億 熊 鹿 and a third try at 典 with the separate bar under 曲.
+The subagents' reports list what they left out or joined; expect fixes on
+熱 栃 飛 街 潟 願 挙 輪 類 養 and the shared lines in 協 競 群.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
