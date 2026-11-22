@@ -354,6 +354,18 @@ Batch g7 (32 characters, 35 variants) was drawn by four subagents with the
 brief in this file, 8 characters each, and pushed without a blind reading at
 the owner's request. Roughest: 潔 夢 費 減 健 順.
 
+First g7 decisions (健 岐 種 賃 順; g6-f was all adopted meanwhile):
+
+- 順: the third stroke of 川 is the left side of 頁 run full height (`20-24`),
+  with `00-04` and a short `11-13`. Shared lines solve "three strokes in two
+  columns".
+- 健: 聿's bars reach left to the 亻 (`11-41; 12-42`) with the vertical
+  `30-34`; 廴 is `21-12`, `13-24` and `23-14` along the bottom.
+- 岐: 又 keeps its full bar `22-42`, and its right-falling stroke starts at
+  the bar's left end (`22-44`).
+- 種: 重 starts with a ノ off a short top bar (`30-40; 30-21`).
+- 賃: rejected without a comment (任 over a squeezed 貝).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
