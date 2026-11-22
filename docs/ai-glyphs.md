@@ -316,6 +316,11 @@ g6-c: all 9 adopted, 4 as drawn (阪 設 吸 律), 5 fixed:
 - 無: the ノ runs to the edge (`20-02`), the bar starts at x = 1 (`11-41`), and
   灬 keeps four dots.
 
+Batch g6-d (7 characters): 飯 賞 常 割 机 捨 泉. The blind reader read 5 of
+7: 賞 without the 口 of 尚 read as 覚, and 捨 read as 拾 because the vertical
+of 干 merged into the roof. Both were fixed before sending (口 put back; the
+vertical runs from below the roof through the bar to 口).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
