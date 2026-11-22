@@ -46,6 +46,8 @@ def request(url, payload=None):
         fail(f"{url} -> HTTP {error.code}: {error.read().decode('utf-8', 'replace')[:300]}")
     except urllib.error.URLError as error:
         fail(f"{url} -> {error.reason}")
+    except (TimeoutError, OSError) as error:  # a stalled read is not a URLError; wait retries on fail()
+        fail(f"{url} -> {error}")
 
 
 def load(name):
