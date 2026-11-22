@@ -336,6 +336,16 @@ Batch g6-e (8 characters): 飼 械 差 刷 試 初 張 状. Bold omissions, said
 the notes: 廾 of 戒, 工 of 式, the extra dot of 衤. The blind reader read all
 8 (械 with low confidence).
 
+g6-e: all 8 adopted (飼 状 as drawn). **Every component I left out came back
+in the fix**: 械 got 廾 (`12-32; 21-23`), 試 got 工 (`12-32; 22-23`) and the
+ノ of 戈 (`32-14`), 初 got the extra dot of 衤 (`22-13`). So do not drop a
+component to make room; squeeze it in, even as a single stroke. Also:
+
+- 差: 工 is `13-33`, `23-24` and a full-width bottom `04-44`.
+- 刷: the right side of 巾 stops at `23`.
+- 張: 長's long bar joins 弓 (`03-43`), with `24-34`, `43-34` and `33-44`
+  below.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
