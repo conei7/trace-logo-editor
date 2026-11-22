@@ -346,6 +346,10 @@ component to make room; squeeze it in, even as a single stroke. Also:
 - 張: 長's long bar joins 弓 (`03-43`), with `24-34`, `43-34` and `33-44`
   below.
 
+Batch g6-f (6 characters): 側 浴 浅 銭 誌 授. The blind reader read all 6.
+Only one stroke is left out (the short stroke of 刂 in 側, which has no
+column left).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
