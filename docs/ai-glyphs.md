@@ -302,6 +302,10 @@ g6-b: all 14 adopted, 7 as drawn (賀 景 置 票 厚 査 党), 7 fixed:
   vertical from the bottom of 口.
 - 菜: 爫 as `02-32; 02-13; 41-32; 42-33`.
 
+Batch g6-c (9 dense characters): 阪 設 吸 要 仮 洗 律 争 無, copying parts the
+owner finished meanwhile (坂's 反, 役's 殳, 級's 及, 安's 女). The blind reader
+read all 9.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
