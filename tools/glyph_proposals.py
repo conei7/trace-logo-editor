@@ -697,9 +697,11 @@ def review_left(url, doc=None):
 
 def cmd_wait(args):
     """Polls the shared server and exits once the owner has worked through the whole AI queue,
-    or has pressed 次の組を頼む in the app (an unhandled request, printed with its note)."""
+    has decided --after proposals since the wait began (so the next batch can be drawn while
+    the owner keeps reviewing), or has pressed 次の組を頼む in the app (printed with its note)."""
     import time
     last = None
+    first_pending = None
     while True:
         try:
             doc = request(f"{args.url}/api/proposals")
@@ -708,12 +710,20 @@ def cmd_wait(args):
                 print(f"requested in the app at {asked['requestedAt']}: {asked.get('note') or '(no note)'}", flush=True)
                 return
             left = review_left(args.url, doc)
+            pending = {char for char, item in doc.get("items", {}).items() if item.get("status") == "pending"}
+            if first_pending is None:
+                first_pending = pending
         except SystemExit as error:  # request() exits on network errors; keep waiting instead
             print(f"server not reached ({error}); retrying", flush=True)
             time.sleep(args.every)
             continue
         if not left:
             print("review finished: nothing pending and every adopted glyph is finished", flush=True)
+            return
+        decided = first_pending - pending
+        if args.after and len(decided) >= args.after:
+            print(f"{len(decided)} decided since the wait began ({''.join(sorted(decided))}); "
+                  f"{len(pending)} still pending", flush=True)
             return
         if len(left) != last:
             print(f"{len(left)} left: {''.join(left)}", flush=True)
@@ -831,6 +841,8 @@ def main():
 
     wait = add("wait", cmd_wait, "wait until the owner has reviewed every proposal or asked for more, then exit")
     wait.add_argument("--every", type=int, default=60, help="seconds between checks")
+    wait.add_argument("--after", type=int, default=0,
+                      help="also exit once this many proposals were decided since the wait began")
     wait.add_argument("--url", default=DEFAULT_URL)
 
     adopt = add("adopt", cmd_adopt, "apply variants the owner chose in conversation (writes glyph data)")

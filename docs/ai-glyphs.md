@@ -487,6 +487,13 @@ marks the request handled), and start `wait` again. A character left
 undecided in the app keeps `wait` waiting unless the owner sends a request;
 that is the owner's way to pause the loop.
 
+**Keep the queue full.** The owner asked for big batches (30 to 40
+characters) and for the next batch to be drawn while they are still
+reviewing: run `wait --after 5`, and as soon as five proposals are decided,
+pull, harvest, record, draw the next batch and push it on top of what is
+still pending. Nothing comes out right in one go anyway; the fixes teach as
+they arrive.
+
 **Do not ask the owner anything in the conversation.** The point of the loop
 is that the owner works only in the app; a question in the chat stalls it.
 When a choice comes up, make it, and say what was chosen in the variant
