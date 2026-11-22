@@ -332,6 +332,10 @@ g6-d: 6 of 7 adopted (常 泉 as drawn), 賞 rejected without a comment. Fixes:
   `30-32` from the apex.
 - 賞: rejected; 尚 over a squeezed 貝 is too much for four rows. Leave it.
 
+Batch g6-e (8 characters): 飼 械 差 刷 試 初 張 状. Bold omissions, said in
+the notes: 廾 of 戒, 工 of 式, the extra dot of 衤. The blind reader read all
+8 (械 with low confidence).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
