@@ -285,6 +285,23 @@ Batch g6-b (14 dense characters): 芽 賀 希 景 菜 笑 置 票 厚 査 災 �
 drawn with the g6-a lessons from the start (one-row 日 with a V, legs of 木
 running through the part below as in 奈). The blind reader read all 14.
 
+g6-b: all 14 adopted, 7 as drawn (賀 景 置 票 厚 査 党), 7 fixed:
+
+- 笑 災: **the old rule again: legs that start on row 3 end in tails along the
+  bottom** (`23-14-04; 23-34-44`). I forgot it for 夭 and 火; check every
+  pair of legs against it before sending.
+- 災: 巛 is three く (`10-01-12; 20-11-22; 30-21-32`); 火 below has its dots
+  `02-13; 42-33` and the vertical `22-23`.
+- 希: 㐅 is a big X `10-32; 30-12`, then ナ (`02-42; 22-04`) and 巾 on rows
+  3..4 with the vertical `22-24`.
+- 芽: 牙 is three bars (`01-41; 02-42; 03-43`), the short left stroke `12-13`,
+  the vertical `32-34` with hook `24-34`, and ノ `23-14`.
+- 述: 朮 in two columns has its dot `30-41` and short verticals for legs
+  (`22-23; 42-43`).
+- 堂: 口 hangs from the bar of 冖 (`11-12; 31-32; 12-32`), then 土 with its
+  vertical from the bottom of 口.
+- 菜: 爫 as `02-32; 02-13; 41-32; 42-33`.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
