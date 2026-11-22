@@ -350,6 +350,10 @@ Batch g6-f (6 characters): 側 浴 浅 銭 誌 授. The blind reader read all 6.
 Only one stroke is left out (the short stroke of 刂 in 側, which has no
 column left).
 
+Batch g7 (32 characters, 35 variants) was drawn by four subagents with the
+brief in this file, 8 characters each, and pushed without a blind reading at
+the owner's request. Roughest: 潔 夢 費 減 健 順.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
@@ -486,6 +490,12 @@ record what the decisions teach, draw the next batch, review it, push it (that
 marks the request handled), and start `wait` again. A character left
 undecided in the app keeps `wait` waiting unless the owner sends a request;
 that is the owner's way to pause the loop.
+
+**Stream, do not batch.** The owner finds the waiting too long: push each
+group as soon as it is drawn (a few characters at a time is fine), skip the
+blind reading when it would hold things up, and come back to the unsure ones
+when the owner's fixes and rejections say what was wrong. Drawing can be
+split among subagents; push each one's file as it arrives.
 
 **Keep the queue full.** The owner asked for big batches (30 to 40
 characters) and for the next batch to be drawn while they are still
