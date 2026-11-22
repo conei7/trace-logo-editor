@@ -306,6 +306,16 @@ Batch g6-c (9 dense characters): 阪 設 吸 要 仮 洗 律 争 無, copying pa
 owner finished meanwhile (坂's 反, 役's 殳, 級's 及, 安's 女). The blind reader
 read all 9.
 
+g6-c: all 9 adopted, 4 as drawn (阪 設 吸 律), 5 fixed:
+
+- 要: 覀 keeps two rows (`00-40`; box `01-41-42-02` with `10-12; 30-32`);
+  女 below is `22-13-24`, bar `03-43`, ノ `32-14` and ticks `04-14; 24-44`.
+- 仮: 反 keeps its sweep `23-14` even where it meets the bottom of 亻.
+- 洗: 先's right leg is 乚 from the top (`30-34-44-43`), the left leg `33-24`.
+- 争: 彐 is narrow (`11-31; 13-33; 31-33`) with only the middle bar long.
+- 無: the ノ runs to the edge (`20-02`), the bar starts at x = 1 (`11-41`), and
+  灬 keeps four dots.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
