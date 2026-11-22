@@ -321,6 +321,17 @@ Batch g6-d (7 characters): 飯 賞 常 割 机 捨 泉. The blind reader read 5 
 of 干 merged into the roof. Both were fixed before sending (口 put back; the
 vertical runs from below the roof through the bar to 口).
 
+g6-d: 6 of 7 adopted (常 泉 as drawn), 賞 rejected without a comment. Fixes:
+
+- 飯: 反's left side runs to the bottom (`20-24`) and loses its sweep; 飠 and
+  反 share that line.
+- 割: the vertical of 害 stops at the bar (`10-12`) instead of entering 口.
+- 机: 几 is `20-30` on top, a left leg `20-23-14` and a right leg
+  `30-34-44-43`.
+- 捨: 舎 keeps the bar under its roof (`01-41`, joined to 扌) and the vertical
+  `30-32` from the apex.
+- 賞: rejected; 尚 over a squeezed 貝 is too much for four rows. Leave it.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
