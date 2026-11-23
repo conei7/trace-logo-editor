@@ -646,6 +646,9 @@ def cmd_harvest(args):
             added += 1
     path.write_text(json.dumps(log, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"added {added} verdicts to {path}")
+    dropped = [item["char"] for item in proposals.get("items", {}).values() if item.get("droppedRedraw")]
+    if dropped:
+        print(f"decided on the version before a redraw (the redraw was never seen): {''.join(dropped)}")
 
 
 def cmd_merge(args):
@@ -680,8 +683,18 @@ def cmd_push(args):
     drawn = [item["char"] for item in payload["items"] if glyphs[item["char"]]["activeEdges"]]
     if drawn and not args.replace:
         fail(f"{''.join(drawn)} already have edges on the server; drop them or pass --replace if the owner asked for a redraw")
+    # An adopted proposal is the owner's hand fix in progress, even with every line erased.
+    current = request(f"{args.url}/api/proposals").get("items", {})
+    adopted = [item["char"] for item in payload["items"] if current.get(item["char"], {}).get("status") == "adopted"]
+    if adopted and not args.replace:
+        fail(f"{''.join(adopted)} were adopted in the app; drop them or pass --replace if the owner asked for a redraw")
+    # Redrawing a pending proposal is safe: the server keeps the older version, and a decision the
+    # owner makes on it later still counts.
+    redrawn = [item["char"] for item in payload["items"] if current.get(item["char"], {}).get("status") == "pending"]
     result = request(f"{args.url}/api/proposals", payload)
     print(f"sent {len(result.get('chars', []))} proposals to {args.url}: {''.join(result.get('chars', []))}")
+    if redrawn:
+        print(f"redrew {len(redrawn)} that were still waiting: {''.join(redrawn)}")
 
 
 def review_left(url, doc=None):
@@ -701,7 +714,7 @@ def cmd_wait(args):
     the owner keeps reviewing), or has pressed 次の組を頼む in the app (printed with its note)."""
     import time
     last = None
-    first_pending = None
+    seen_pending = set()  # every proposal seen waiting, including ones sent after the wait began
     while True:
         try:
             doc = request(f"{args.url}/api/proposals")
@@ -711,8 +724,7 @@ def cmd_wait(args):
                 return
             left = review_left(args.url, doc)
             pending = {char for char, item in doc.get("items", {}).items() if item.get("status") == "pending"}
-            if first_pending is None:
-                first_pending = pending
+            seen_pending |= pending
         except SystemExit as error:  # request() exits on network errors; keep waiting instead
             print(f"server not reached ({error}); retrying", flush=True)
             time.sleep(args.every)
@@ -720,7 +732,7 @@ def cmd_wait(args):
         if not left:
             print("review finished: nothing pending and every adopted glyph is finished", flush=True)
             return
-        decided = first_pending - pending
+        decided = seen_pending - pending
         if args.after and len(decided) >= args.after:
             print(f"{len(decided)} decided since the wait began ({''.join(sorted(decided))}); "
                   f"{len(pending)} still pending", flush=True)

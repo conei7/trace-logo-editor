@@ -176,6 +176,7 @@ const state = {
   aiRequestError: "",
   proposalFilter: false,
   proposalChar: null,
+  proposalCreatedAt: null,
   proposalVariant: 0,
   reference: {
     font: DEFAULT_REFERENCE.font,
@@ -3741,8 +3742,14 @@ function reviewQueueIndexes() {
 function selectedProposalIndex(item) {
   if (state.proposalChar !== item.char) {
     state.proposalChar = item.char;
+    state.proposalCreatedAt = item.createdAt;
     state.proposalVariant = 0;
     els.proposalComment.value = "";
+  } else if (state.proposalCreatedAt !== item.createdAt) {
+    // The agent redrew this proposal while it was on screen: start from its first variant,
+    // keeping any comment already typed.
+    if (state.proposalCreatedAt) state.proposalVariant = 0;
+    state.proposalCreatedAt = item.createdAt;
   }
   return clamp(Number(state.proposalVariant) || 0, 0, item.variants.length - 1);
 }

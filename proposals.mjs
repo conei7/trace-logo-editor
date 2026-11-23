@@ -9,6 +9,8 @@ const MAX_ITEMS_PER_BATCH = 400;
 const MAX_VARIANTS = 8;
 const MAX_EDGES = 200;
 const MAX_TEXT = 400;
+// Earlier versions of a pending proposal kept after a quiet redraw, newest first.
+const MAX_SUPERSEDED = 3;
 
 export function emptyProposalDoc() {
   return { version: 1, revision: 0, updatedAt: null, items: {} };
@@ -77,8 +79,12 @@ export function applyProposalBatch(current, body, now = new Date().toISOString()
         comment: previous.comment || "",
         decidedAt: previous.decidedAt || null
       };
-    } else if (previous && previous.previous) {
-      item.previous = previous.previous;
+    } else if (previous) {
+      if (previous.previous) item.previous = previous.previous;
+      // A redraw of a proposal nobody has decided yet. The owner may still hold the earlier
+      // version on a phone that went offline, so keep it until a decision arrives.
+      const earlier = { createdAt: previous.createdAt, batch: previous.batch, note: previous.note, variants: previous.variants };
+      item.superseded = [earlier, ...(Array.isArray(previous.superseded) ? previous.superseded : [])].slice(0, MAX_SUPERSEDED);
     }
     doc.items[item.char] = item;
     chars.push(item.char);
@@ -95,7 +101,16 @@ export function applyProposalDecision(current, body, now = new Date().toISOStrin
   const item = doc.items[body.char];
   if (!item) throw requestError("No proposal for this character", 404);
   if (body.createdAt && item.createdAt && body.createdAt !== item.createdAt) {
-    throw requestError("The proposal was replaced after this decision was made", 409);
+    // A redraw replaced this pending proposal after the owner loaded it. The decision on the
+    // version they saw wins; the unseen redraw is dropped, and the agent can send it again.
+    const seen = item.status === "pending" && body.status !== "pending" && Array.isArray(item.superseded)
+      ? item.superseded.find((version) => version && version.createdAt === body.createdAt)
+      : null;
+    if (!seen || !Array.isArray(seen.variants)) {
+      throw requestError("The proposal was replaced after this decision was made", 409);
+    }
+    item.droppedRedraw = { batch: item.batch, createdAt: item.createdAt };
+    Object.assign(item, { createdAt: seen.createdAt, batch: seen.batch, note: seen.note || "", variants: seen.variants });
   }
 
   if (body.status === "adopted") {
@@ -121,6 +136,7 @@ export function applyProposalDecision(current, body, now = new Date().toISOStrin
     item.chosen = null;
     delete item.final;
   }
+  if (body.status !== "pending") delete item.superseded;
   item.status = body.status;
   item.comment = body.status === "pending" ? "" : cleanText(body.comment);
   item.decidedAt = body.status === "pending" ? null : now;

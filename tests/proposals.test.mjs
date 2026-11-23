@@ -70,6 +70,49 @@ test("decisions record the choice and a new batch keeps the last verdict", () =>
   assert.equal(doc.items["路"].previous.status, "rejected");
 });
 
+test("a quiet redraw never loses a decision made on the version the owner had loaded", () => {
+  let { doc } = applyProposalBatch(emptyProposalDoc(), batch([{ char: "路", note: "old", variants: [variant("h-0-0"), variant("v-0-0")] }]), "T1");
+  ({ doc } = applyProposalBatch(doc, batch([{ char: "路", note: "new", variants: [variant("h-1-1")] }]), "T2"));
+  assert.equal(doc.items["路"].status, "pending");
+  assert.deepEqual(doc.items["路"].superseded.map((version) => version.createdAt), ["T1"]);
+  ({ doc } = applyProposalBatch(doc, batch([{ char: "路", variants: [variant("h-2-2")] }]), "T3"));
+  assert.deepEqual(doc.items["路"].superseded.map((version) => version.createdAt), ["T2", "T1"], "older versions are kept too");
+
+  // The phone had T1 on screen and adopts its second variant: that version comes back and is adopted.
+  const adopted = applyProposalDecision(doc, { char: "路", status: "adopted", variant: 1, comment: "これで", createdAt: "T1" }, "T4");
+  const item = adopted.items["路"];
+  assert.deepEqual({ status: item.status, chosen: item.chosen, createdAt: item.createdAt, note: item.note, comment: item.comment },
+    { status: "adopted", chosen: 1, createdAt: "T1", note: "old", comment: "これで" });
+  assert.deepEqual(item.variants[1].activeEdges, ["v-0-0"]);
+  assert.deepEqual(item.droppedRedraw, { batch: "t", createdAt: "T3" }, "the unseen redraw is noted so the agent can resend it");
+  assert.equal(item.superseded, undefined);
+
+  const rejected = applyProposalDecision(doc, { char: "路", status: "rejected", comment: "細い", createdAt: "T2" }, "T4").items["路"];
+  assert.deepEqual({ status: rejected.status, createdAt: rejected.createdAt, comment: rejected.comment }, { status: "rejected", createdAt: "T2", comment: "細い" });
+
+  assert.throws(() => applyProposalDecision(doc, { char: "路", status: "adopted", variant: 0, createdAt: "T0" }), (error) => error.status === 409);
+  const current = applyProposalDecision(doc, { char: "路", status: "adopted", variant: 0, createdAt: "T3" }, "T4").items["路"];
+  assert.equal(current.droppedRedraw, undefined);
+  assert.equal(current.superseded, undefined);
+  assert.throws(() => applyProposalDecision(adopted, { char: "路", status: "rejected", createdAt: "T3" }), (error) => error.status === 409,
+    "once decided, a stale decision on another version is refused");
+});
+
+test("a redraw that arrives while its proposal is on screen starts from its first variant", () => {
+  const ctx = contextFor(["selectedProposalIndex"], {
+    clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
+    els: { proposalComment: { value: "途中のメモ" } },
+    state: { proposalChar: null, proposalCreatedAt: null, proposalVariant: 0 }
+  });
+  const first = { char: "路", createdAt: "T1", variants: [variant("h-0-0"), variant("v-0-0")] };
+  assert.equal(ctx.selectedProposalIndex(first), 0);
+  ctx.state.proposalVariant = 1;
+  ctx.els.proposalComment.value = "途中のメモ";
+  assert.equal(ctx.selectedProposalIndex(first), 1);
+  assert.equal(ctx.selectedProposalIndex({ ...first, createdAt: "T2" }), 0);
+  assert.equal(ctx.els.proposalComment.value, "途中のメモ", "a comment already typed is kept");
+});
+
 test("a request from the app waits until the next batch arrives", () => {
   let doc = applyProposalRequest(emptyProposalDoc(), { note: "  次は50字で  " }, "T1");
   assert.deepEqual(doc.request, { requestedAt: "T1", note: "次は50字で", handledAt: null });
