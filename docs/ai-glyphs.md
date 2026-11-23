@@ -445,6 +445,15 @@ Then: 副 adopted as drawn; 府 阜 富 変 便 adopted with fixes; 望 being fi
 - 便: 更's vertical runs through the 日 from the top bar (`30-33`).
 - 阜: the inner box's right side stops at the middle bar (`31-32`).
 
+Then: 勇 量 輪 類 adopted as drawn; 満 陸 養 例 adopted with small fixes; 液
+being redrawn by the owner.
+
+- 陸: the upper 土 of 坴 keeps its top bar (`20-40`); shrinking 土 to a 十
+  is dropping a stroke.
+- 満: 両 keeps its 人人 as an X inside the box (`21-32; 31-22`).
+- 養: 食's bar runs the full width (`01-41`) and 艮's legs cross at the
+  lower right.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
