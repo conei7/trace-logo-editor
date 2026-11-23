@@ -744,8 +744,8 @@ def cmd_wait(args):
             left = review_left(args.url, doc)
             pending = {char for char, item in doc.get("items", {}).items() if item.get("status") == "pending"}
             seen_pending |= pending
-        except SystemExit as error:  # request() exits on network errors; keep waiting instead
-            print(f"server not reached ({error}); retrying", flush=True)
+        except (SystemExit, Exception) as error:  # request() exits on network errors; keep waiting instead
+            print(f"server not reached ({error!r}); retrying", flush=True)
             time.sleep(args.every)
             continue
         if not left:

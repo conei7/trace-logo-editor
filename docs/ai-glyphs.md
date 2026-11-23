@@ -454,6 +454,17 @@ being redrawn by the owner.
 - 養: 食's bar runs the full width (`01-41`) and 艮's legs cross at the
   lower right.
 
+Then: 価 快 基 adopted with fixes (価 redrawn); 潔 being fixed; 液 隊 府 望
+finished after long fixes.
+
+- 価: 亻 takes a single column (`10-01; 01-04`) so 西 gets three: its top
+  bar `11-41`, the box `12-42; 14-44; 12-14; 42-44`, and the two inner
+  verticals running from the top bar to the bottom (`21-24; 31-34`).
+- 快: 夬's short left stroke slants down to the right (`11-22`).
+- 基: 其 is a two-row box under a bar on the top row (`00-40`), with a V in
+  each row (`10-21; 30-21`, `11-22; 31-22`), as in 期; 土's vertical rises
+  to touch it (`22-24`).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
