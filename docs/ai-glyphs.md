@@ -493,8 +493,9 @@ fixed.
 
 - 情 性: 忄's right dot fixed to `11-22`, as in 快.
 - 制: the top of 制 gets its short left bar (`01-11`) beside the ノ.
-- 賞: 貝 under 尚 is a box from row 1 to row 3 with two ╲ inside (`12-23;
-  22-33`) and its legs as stubs on the bottom row (`04-14; 34-44`), as in 賀.
+- 賞: 貝 under 尚 is a one-row box (`12-32; 13-33`) with two ╲ inside
+  (`12-23; 22-33`) instead of a V, and its legs are stubs on the bottom row
+  (`04-14; 34-44`), as in 賀.
 
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
