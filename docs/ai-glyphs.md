@@ -497,6 +497,16 @@ fixed.
   (`12-23; 22-33`) instead of a V, and its legs are stubs on the bottom row
   (`04-14; 34-44`), as in 賀.
 
+Then: 貸 銅 導 破 adopted as drawn (導 with the empty one-row 自); 素 測 団
+燃 adopted with fixes; 費 being fixed.
+
+- 素: 小 under 糸 on the bottom row is the centre stub `23-24` with the
+  side strokes as stubs `04-14; 34-44`, like 貝's legs.
+- 測: 貝's legs spread outward from its bottom corners (`23-14; 33-44`).
+- 団: 寸's bar reaches the right side of 囗 (`11-41`).
+- 燃: 灬 under the narrow 然 is three short verticals (`23-24; 33-34;
+  43-44`), as in 馬; full-width 灬 stays the four slants of 然 and 点.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
