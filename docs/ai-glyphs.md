@@ -507,6 +507,21 @@ Then: 貸 銅 導 破 adopted as drawn (導 with the empty one-row 自); 素 測
 - 燃: 灬 under the narrow 然 is three short verticals (`23-24; 33-34;
   43-44`), as in 馬; full-width 灬 stays the four slants of 然 and 点.
 
+Then: 評 粉 報 adopted as drawn; 貧 墓 夢 adopted with fixes; 容 being fixed;
+費 and 豊 rejected without a comment.
+
+- 容: the owner moved 宀's roof down to row 1 to give it its dot (`20-21`).
+  Most finished 宀 keep the dot (字 家 安 客 実 守 宿 定 害 完 宇 宗 宅 宝 空
+  究 案); only the tightest drop it (官 富 宮 室). 額 and 察, which had
+  dropped it, went to a redraw with the dot first (g10-r2).
+- 墓: 大's legs run from its bar through 土 to the bottom corners
+  (`22-13-04; 22-33-44`), as 木's legs run through 奈 and 査.
+- 貧: 分's 刀 bends as `21-32` with the ノ `22-13`.
+- 夢: the owner chose the narrower 罒 under 艹 (as 草), and gave 夕 a base
+  `14-24`.
+- 豊: the 曲 without its middle bar, sitting straight on 豆's 口, was
+  rejected; retry with the 曲 of 典.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
