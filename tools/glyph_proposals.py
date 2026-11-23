@@ -568,10 +568,29 @@ def cmd_study(args):
         render_sheet([(char, glyphs[char]["activeEdges"]) for char in dict.fromkeys(shown)], args.sheet, cols=args.cols)
 
 
+def unjoined_bands(edges):
+    """Row bands that no line crosses while there are lines both above and below them."""
+    spans = []
+    for edge in edges:
+        kind, _, y = edge.split("-")
+        y = int(y)
+        spans.append((y, y) if kind == "h" else (y, y + 1))
+    rows = max((bottom for _, bottom in spans), default=0)
+    return [band for band in range(rows)
+            if not any(top <= band and bottom >= band + 1 for top, bottom in spans)
+            and any(bottom <= band for _, bottom in spans) and any(top >= band + 1 for top, _ in spans)]
+
+
 def cmd_check(args):
     payload, warnings = expand_batch(json.loads(Path(args.batch).read_text(encoding="utf-8")), load("project.json"))
     for warning in warnings:
         print("warning:", warning)
+    for item in payload["items"]:
+        for index, variant in enumerate(item["variants"]):
+            for band in unjoined_bands(variant["activeEdges"]):
+                # The owner asked why 典 had a gap between 曲 and its base: stacked parts touch.
+                print(f"note: {item['char']}{index + 1}: nothing crosses from row {band} to row {band + 1}; "
+                      "parts stacked in one character usually touch (典, 梨)")
     print_ascii(batch_view_items(payload))
     if args.sheet:
         render_sheet(batch_view_items(payload, with_reference=True), args.sheet, cols=args.cols,

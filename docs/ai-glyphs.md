@@ -398,6 +398,25 @@ g7 and g8, first decisions (11 of them): 積 説 巣 adopted as drawn; 孫 帯 �
   proposals whose notes say such a dot was left out (戈 in 議 and 夕 in 夢
   went to batch g9-r).
 
+Next decisions: 達 adopted as drawn; 兆 典 努 働 徳 栃 梨 adopted with fixes;
+熱 still being fixed.
+
+- 典 (third try): 「なんで上と下が離れてんの?」. Parts stacked in one
+  character touch; no empty row between them. 曲 is `01-31; 02-32`, the
+  verticals `10-13; 20-23`, the sides `01-03; 31-33`, and its bottom is the
+  long bar `03-43`, with the legs `13-04; 23-34`.
+- 梨: 木 at the bottom pokes up one row to touch what is above (`22-23`, as
+  集 楽 業 薬). The owner added exactly that line, plus 禾's top ノ `10-01`.
+  Before pushing, check that no row band is crossed by nothing when the
+  parts are meant to touch (賀, with 貝 hanging under 加, is the exception).
+- 兆: the dot at the top left is a slant (`00-11`), not a vertical stub.
+- 努: 力 at the bottom starts its ノ as a short vertical above the bar and
+  slants below it (`22-23; 23-14`), as in 男 and 労.
+- 徳: 十 over 罒 keeps its own bar (`20-40`); it does not share 罒's top.
+- 栃: 木's bar and the top bar of 万 become one line (`01-41`), as in 孫.
+- 働: 重 starts with a slant from the top (`20-11`) onto a bar that runs to
+  the left edge (`01-41`), and sits on a base `04-24`.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
