@@ -460,7 +460,8 @@ finished after long fixes.
 - 価: 亻 takes a single column (`10-01; 01-04`) so 西 gets three: its top
   bar `11-41`, the box `12-42; 14-44; 12-14; 42-44`, and the two inner
   verticals running from the top bar to the bottom (`21-24; 31-34`).
-- 快: 夬's short left stroke slants down to the right (`11-22`).
+- 快: 忄's right dot slants down to the right from the vertical (`11-22`);
+  情 and 性 got the same fix, so 忄 is `10-14; 01-02; 11-22`.
 - 基: 其 is a two-row box under a bar on the top row (`00-40`), with a V in
   each row (`10-21; 30-21`, `11-22; 31-22`), as in 期; 土's vertical rises
   to touch it (`22-24`).
@@ -486,6 +487,14 @@ the 堂 top over a two-row 目) adopted and being fixed.
   over the slant `13-04`.
 - 際: 祭's top right is three short verticals under `20-40` with the slants
   `20-42; 21-32; 31-22; 41-32`.
+
+Then: 税 績 絶 adopted as drawn; 情 性 制 賞 adopted with fixes; 素 being
+fixed.
+
+- 情 性: 忄's right dot fixed to `11-22`, as in 快.
+- 制: the top of 制 gets its short left bar (`01-11`) beside the ノ.
+- 賞: 貝 under 尚 is a box from row 1 to row 3 with two ╲ inside (`12-23;
+  22-33`) and its legs as stubs on the bottom row (`04-14; 34-44`), as in 賀.
 
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
