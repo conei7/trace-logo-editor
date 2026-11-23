@@ -113,6 +113,17 @@ test("a redraw that arrives while its proposal is on screen starts from its firs
   assert.equal(ctx.els.proposalComment.value, "途中のメモ", "a comment already typed is kept");
 });
 
+test("the glyph being edited stays in the list when the filter would hide it", () => {
+  const glyphs = ["一", "二", "三", "四"].map((char) => ({ char }));
+  const ctx = contextFor(["withCurrentGlyph"], { state: { glyphs } });
+  const visible = [{ glyph: glyphs[0], index: 0 }, { glyph: glyphs[3], index: 3 }];
+  assert.equal(ctx.withCurrentGlyph(visible, 0), visible, "already listed: unchanged");
+  const withTwo = ctx.withCurrentGlyph(visible, 2);
+  assert.equal(JSON.stringify(withTwo.map(({ index, outside }) => [index, Boolean(outside)])), "[[0,false],[2,true],[3,false]]");
+  assert.equal(ctx.withCurrentGlyph([visible[0]], 3).map(({ index }) => index).join(), "0,3");
+  assert.equal(ctx.withCurrentGlyph([], 1).map(({ index }) => index).join(), "1");
+});
+
 test("a request from the app waits until the next batch arrives", () => {
   let doc = applyProposalRequest(emptyProposalDoc(), { note: "  次は50字で  " }, "T1");
   assert.deepEqual(doc.request, { requestedAt: "T1", note: "次は50字で", handledAt: null });

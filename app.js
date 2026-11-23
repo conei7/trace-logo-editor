@@ -115,6 +115,7 @@ let remoteRefreshInFlight = false;
 let partNameGlyphChar = null;
 let proposalDecisionQueue = null;
 let proposalDecisionFlushInFlight = false;
+let listRevealedIndex = null;
 
 const DEFAULT_TRANSFORM = {
   scale: 0.86,
@@ -1136,15 +1137,16 @@ function shouldDropBelowLatinBaseline(char) {
 function renderList() {
   renderFolderTabs();
   const fragment = document.createDocumentFragment();
-  const visibleGlyphs = getVisibleGlyphs();
+  const filteredGlyphs = getVisibleGlyphs();
+  const visibleGlyphs = state.glyphSearch ? filteredGlyphs : withCurrentGlyph(filteredGlyphs, state.current);
   els.glyphSearchResult.hidden = !state.glyphSearch;
-  els.glyphSearchResult.textContent = visibleGlyphs.length
-    ? `全文字から ${visibleGlyphs.length}字`
+  els.glyphSearchResult.textContent = filteredGlyphs.length
+    ? `全文字から ${filteredGlyphs.length}字`
     : "一致する文字がありません";
-  visibleGlyphs.forEach(({ glyph, index }) => {
+  visibleGlyphs.forEach(({ glyph, index, outside }) => {
     const card = document.createElement("button");
     card.type = "button";
-    card.className = `char-card ${glyph.status === "完成" ? "is-done" : "is-todo"}${state.duplicateExactChars.has(glyph.char) ? " is-duplicate" : ""}${index === state.current ? " is-active" : ""}`;
+    card.className = `char-card ${glyph.status === "完成" ? "is-done" : "is-todo"}${state.duplicateExactChars.has(glyph.char) ? " is-duplicate" : ""}${index === state.current ? " is-active" : ""}${outside ? " is-outside" : ""}`;
     card.dataset.index = String(index);
 
     const char = document.createElement("span");
@@ -1176,9 +1178,10 @@ function renderList() {
   });
 
   els.charList.replaceChildren(fragment);
-  els.glyphCount.textContent = visibleGlyphs.length === state.glyphs.length
+  revealActiveCard();
+  els.glyphCount.textContent = filteredGlyphs.length === state.glyphs.length
     ? String(state.glyphs.length)
-    : `${visibleGlyphs.length}/${state.glyphs.length}`;
+    : `${filteredGlyphs.length}/${state.glyphs.length}`;
   els.currentChar.textContent = getGlyphDisplayChar(currentGlyph().char);
   syncCurrentWidthBadge(currentGlyph().char);
   renderGlyphSelect();
@@ -1225,6 +1228,34 @@ function getVisibleGlyphs() {
     .filter(({ glyph }) => searchChars.size
       ? searchChars.has(glyph.char)
       : matchesFolderFilter(glyph, state.folderFilter) && matchesKanjiGrade(glyph));
+}
+
+// The glyph being edited stays in the list even when the filter would hide it (its status
+// changed, or it was reached from the AI queue), so its finished look is always one glance away.
+function withCurrentGlyph(visible, currentIndex) {
+  if (visible.some(({ index }) => index === currentIndex)) return visible;
+  const glyph = state.glyphs[currentIndex];
+  if (!glyph) return visible;
+  const entry = { glyph, index: currentIndex, outside: true };
+  const at = visible.findIndex(({ index }) => index > currentIndex);
+  return at === -1 ? [...visible, entry] : [...visible.slice(0, at), entry, ...visible.slice(at)];
+}
+
+// Scroll the list (not the page) to the glyph being edited, once each time it changes.
+function revealActiveCard() {
+  if (listRevealedIndex === state.current) return;
+  const card = els.charList.querySelector(".char-card.is-active");
+  if (!card) return;
+  const listBox = els.charList.getBoundingClientRect();
+  const cardBox = card.getBoundingClientRect();
+  if (!cardBox.width || !listBox.width) return;
+  listRevealedIndex = state.current;
+  if (cardBox.left < listBox.left || cardBox.right > listBox.right) {
+    els.charList.scrollLeft += cardBox.left - listBox.left - (listBox.width - cardBox.width) / 2;
+  }
+  if (cardBox.top < listBox.top || cardBox.bottom > listBox.bottom) {
+    els.charList.scrollTop += cardBox.top - listBox.top - (listBox.height - cardBox.height) / 2;
+  }
 }
 
 function clearGlyphSearch() {
@@ -3820,7 +3851,13 @@ function renderProposalPanel() {
     els.proposalAdoptDone.textContent = "完成にする";
     els.proposalAdopt.textContent = "AI案に戻す";
     els.proposalReject.textContent = "やめて却下";
-    els.proposalVariants.hidden = true;
+    // The finished look stays in view while fixing: the shape as it stands, next to the AI's.
+    const adopted = adoptedVariantEdges(fixing, glyph);
+    els.proposalVariants.hidden = false;
+    els.proposalVariants.replaceChildren(
+      proposalThumb(glyph, "いまの形", true),
+      ...(adopted ? [proposalThumb(proposalPreviewGlyph(glyph.char, { activeEdges: adopted }), "AI案", false)] : [])
+    );
     return;
   }
   els.proposalReject.textContent = "却下";
@@ -3851,6 +3888,21 @@ function renderProposalPanel() {
     button.append(label);
     return button;
   }));
+}
+
+function proposalThumb(glyph, labelText, active) {
+  const figure = document.createElement("span");
+  figure.className = `proposal-variant${active ? " is-active" : ""}`;
+  figure.innerHTML = buildSvg(glyph, {
+    size: 96,
+    strokeWidth: state.kanjiListStrokeWidth,
+    pad: 12,
+    includeXml: false
+  });
+  const label = document.createElement("span");
+  label.textContent = labelText;
+  figure.append(label);
+  return figure;
 }
 
 function drawProposalPreview(context, glyph, layout) {

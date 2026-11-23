@@ -213,6 +213,11 @@ button {
   box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.16);
 }
 
+/* The glyph being edited, shown although the current filter leaves it out. */
+.char-card.is-outside {
+  border-style: dashed;
+}
+
 .char-card.is-duplicate {
   border-color: #285c9f;
   box-shadow: inset 0 0 0 2px rgba(40, 92, 159, 0.24);
@@ -1274,6 +1279,20 @@ input[type="checkbox"] {
 
   .proposal-variant span {
     display: none;
+  }
+
+  /* While fixing, the two thumbnails are the only view of the finished look: larger, labelled. */
+  .proposal-panel.is-fixing .proposal-variant {
+    width: 84px;
+  }
+
+  .proposal-panel.is-fixing .proposal-variant svg {
+    width: 72px;
+    height: 72px;
+  }
+
+  .proposal-panel.is-fixing .proposal-variant span {
+    display: block;
   }
 
   .canvas-stage {

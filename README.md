@@ -64,7 +64,11 @@ panel offers adopt-and-finish, adopt-and-edit and reject with a comment. A glyph
 adopted for editing stays in the queue until it is marked finished, even if every line
 is erased. `AI案に戻す` starts the fix over from the adopted shape, and if the fix does
 not work out, `やめて却下` puts back what the glyph held before adoption and rejects
-the proposal.
+the proposal. While a glyph is being fixed, the panel shows its current shape at the
+font's real weight (`いまの形`) next to the adopted AI shape.
+
+The glyph list always shows the glyph being edited and scrolls to it when it changes;
+when the selected tab would leave it out, it appears there with a dashed border.
 
 Agents follow [docs/ai-glyphs.md](docs/ai-glyphs.md) and use
 `python tools/glyph_proposals.py` to study finished glyphs, check a batch and send it
