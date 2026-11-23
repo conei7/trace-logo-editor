@@ -417,6 +417,20 @@ Next decisions: 達 adopted as drawn; 兆 典 努 働 徳 栃 梨 adopted with f
 - 働: 重 starts with a slant from the top (`20-11`) onto a bar that runs to
   the left edge (`01-41`), and sits on a base `04-24`.
 
+Then: 必 標 飛 adopted with fixes, 府 being fixed, and 熱 博 adopted, worked
+on, then given up (`やめて却下`, no comment).
+
+- 必: 心's dots are short verticals (`11-13`, `31-32`), the ノ runs
+  `32-14` through it, and the hook sits on `04-14`.
+- 標: 示 at the lower right spreads 小 from the bar like 木's legs
+  (`33-24; 33-44` with `33-34`), as in 票 and 宗. 祭 and 察 keep the stubs on
+  the bottom row.
+- 飛: redrawn by the owner as two columns of short verticals (`10-13`,
+  `20-24`, `30-34`) between `00-30` and `02-42`, with slants on the right
+  (`31-42; 42-33`, `40-31`) and `10-01`, `13-04` on the left.
+- 熱: before giving up, the owner had moved 丸's cross down to `22-44;
+  32-23` and given 坴 a top bar `00-20` over `10-13`. Retry from there.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
