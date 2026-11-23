@@ -474,6 +474,19 @@ Then: 個 効 鉱 adopted as drawn; 減 潔 adopted with fixes; 混 being fixed.
   33-44` and the bar `23-43`); copy the finished glyph for 糸 squeezed into
   the lower right.
 
+Then: 似 adopted as drawn; 混 際 資 序 adopted with fixes; 賞 (fourth try,
+the 堂 top over a two-row 目) adopted and being fixed.
+
+- 資: 欠 in 次 keeps the hook as a short vertical (`30-31`) and 人 starts
+  from it (`31-22; 31-42`), as in the finished 次. 姿, still pending, was
+  redrawn that way (g10-r).
+- 序: 予's マ is a single slant under the bar (`31-22`), and its top bar
+  runs to the left edge (`02-42`) to meet 广's side.
+- 混: 氵 squeezed beside 日 and 比 became two short bars `01-11; 02-12`
+  over the slant `13-04`.
+- 際: 祭's top right is three short verticals under `20-40` with the slants
+  `20-42; 21-32; 31-22; 41-32`.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
