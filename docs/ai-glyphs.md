@@ -431,6 +431,20 @@ on, then given up (`やめて却下`, no comment).
 - 熱: before giving up, the owner had moved 丸's cross down to `22-44;
   32-23` and given 坴 a top bar `00-20` over `10-13`. Retry from there.
 
+Then: 副 adopted as drawn; 府 阜 富 変 便 adopted with fixes; 望 being fixed.
+
+- 府: 广 keeps its dot. The owner redrew the 庫 form (roof on row 0, no dot)
+  into the 店 form: roof `01-41` across row 1, the dot `20-21` above it,
+  the left side `01-04` full height. Without the dot 广 reads as 厂. 付
+  inside is `21-03; 12-14` and 寸 `22-42; 31-34; 24-34` with the dot
+  `22-33`. 康 and 鹿, which had dropped the dot, went to a redraw.
+- 富: a 田 on the bottom row that spans the full width is a wide box with
+  one divider (`03-43; 04-44; 03-04; 43-44; 23-24`), no V; the 口 above
+  shares its bottom with the 田's top.
+- 変: 亦's outer strokes are slants (`11-02`, `31-42`), not short verticals.
+- 便: 更's vertical runs through the 日 from the top bar (`30-33`).
+- 阜: the inner box's right side stops at the middle bar (`31-32`).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
