@@ -465,6 +465,15 @@ finished after long fixes.
   each row (`10-21; 30-21`, `11-22; 31-22`), as in 期; 土's vertical rises
   to touch it (`22-24`).
 
+Then: 個 効 鉱 adopted as drawn; 減 潔 adopted with fixes; 混 being fixed.
+
+- 減: 咸 is 厂 (`11-41; 11-14`) holding 一 and 口 against its left side
+  (`12-22`, `13-23; 14-24; 23-24`), with 戈 on the right: `30-33`, the
+  slant `33-44`, the ノ `42-24`, the dot `30-41` and the hook `43-44`.
+- 潔: the owner redrew 糸 under 丰刀 (`31-22; 32-23` with `31-42; 32-43;
+  33-44` and the bar `23-43`); copy the finished glyph for 糸 squeezed into
+  the lower right.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
