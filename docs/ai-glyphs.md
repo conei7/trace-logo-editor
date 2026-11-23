@@ -7,8 +7,9 @@ file is the brief for the agent: read it fully before designing anything.
 
 - An agent only creates **proposals**. Never PATCH or PUT `/api/project`; glyph
   data changes only when a person adopts a proposal in the app.
-- Generate proposals only when the owner asks for a batch, and only the
-  characters or the amount they asked for.
+- Generate proposals under the standing go-ahead described in "Loop", and
+  only for the elementary kanji (grades 1 to 6) until the owner has done the
+  overall review that follows them.
 - Only propose characters that have no edges yet. `status` lists them per grade.
   `check` warns when a target already has edges; drop those unless told otherwise.
 - Batch files and pulled data live in `data/ai/` (ignored by Git). Do not commit
@@ -373,6 +374,30 @@ including 愛 億 熊 鹿 and a third try at 典 with the separate bar under 曲
 The subagents' reports list what they left out or joined; expect fixes on
 熱 栃 飛 街 潟 願 挙 輪 類 養 and the shared lines in 協 競 群.
 
+g7 and g8, first decisions (11 of them): 積 説 巣 adopted as drawn; 孫 帯 節
+戦 選 然 倉 adopted with fixes; 隊 still being fixed.
+
+- 孫: when the left part's top bar and the right part's top sit on the
+  same row, they become one line across (`00-40`). 系's right side ends in a
+  short vertical (`41-42`), not a slant.
+- 帯: the top part uses the top row too: `00-40` and `11-31`, with the three
+  short verticals crossing `11-31`.
+- 節: 卩 on the right is `31-41; 41-43; 31-34` with a slant inside
+  (`32-43`), not a short bar.
+- 戦: 単 squeezed into three columns keeps its ツ as two ╲ and one ╱
+  (`00-11; 10-21; 20-11`), its 十 runs from row 1 (`11-14`), and it gets a
+  base (`04-24`). 戈's dot stays (`40-41`).
+- 選: each 己 of 巳巳 is a top bar, a slant down-left and the inner bar
+  (`10-20; 20-11`, `30-40; 40-31`); 共 is `02-42`, the verticals `21-23`
+  and `31-33`, and `13-43`.
+- 然: the 夕 with its dot on the upper left is two crossed pairs of slants
+  (`00-11; 10-01` and `01-12; 20-02`) under a short top bar `10-20`.
+- 倉: 戸 inside 人 gets its left side full height (`11-14`) and a V
+  (`11-22; 31-22`); 口 sits on the bottom row (`14-34`).
+- Dots that tell a component apart stay (衤 in 初, 戈 in 戦). Redraw pending
+  proposals whose notes say such a dot was left out (戈 in 議 and 夕 in 夢
+  went to batch g9-r).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
@@ -516,12 +541,32 @@ blind reading when it would hold things up, and come back to the unsure ones
 when the owner's fixes and rejections say what was wrong. Drawing can be
 split among subagents; push each one's file as it arrives.
 
-**Keep the queue full.** The owner asked for big batches (30 to 40
-characters) and for the next batch to be drawn while they are still
-reviewing: run `wait --after 5`, and as soon as five proposals are decided,
-pull, harvest, record, draw the next batch and push it on top of what is
-still pending. Nothing comes out right in one go anyway; the fixes teach as
-they arrive.
+**Keep about 100 waiting, and redraw them as the lessons arrive.** The owner
+reviews on the train and rarely gets through more than 100 in one sitting, so
+keep the pending queue near 100 and no further. Run `wait --after 5`; each
+time it fires:
+
+1. `pull`, `harvest`, read the fixes and rejections, and record what they
+   teach under "Decisions so far".
+2. Redraw the pending proposals a new lesson applies to (`find` lists the
+   kanji with a component; keep the pending ones drawn before the lesson).
+   Pushing a character that is still pending replaces it quietly: the server
+   keeps the older version, so a decision the owner makes on it from a phone
+   that loaded it earlier still counts (`harvest` names those, and the redraw
+   can be sent again). Do not announce redraws; the note describes the new
+   shape like any other. `push` refuses adopted proposals, which are the
+   owner's hand fixes in progress.
+3. Retry rejected characters once the comments or later fixes say what was
+   wrong.
+4. Top the queue back up to about 100 with new characters, then start
+   `wait --after 5` again.
+
+Nothing comes out right in one go anyway; the fixes teach as they arrive.
+
+**Stop at the elementary kanji.** The owner will review the whole set once
+all 1026 elementary kanji are drawn and decided, before anything beyond them
+(常用, 人名用, the rest of JIS level 1). When no undrawn elementary kanji are
+left, keep up the redraws and retries and draw nothing new.
 
 **Do not ask the owner anything in the conversation.** The point of the loop
 is that the owner works only in the app; a question in the chat stalls it.
