@@ -522,6 +522,23 @@ Then: 評 粉 報 adopted as drawn; 貧 墓 夢 adopted with fixes; 容 being fi
 - 豊: the 曲 without its middle bar, sitting straight on 豆's 口, was
   rejected; retry with the 曲 of 典.
 
+Then: 拡 簡 adopted as drawn; 異 映 領 閣 揮 adopted with fixes.
+
+- 異: 八 under a bar on row 3 is two stubs on the bottom row (`04-14;
+  34-44`), like 貝's legs. With a free row under the bar it stays the
+  detached slants of 共 (`13-04; 33-44` under a bar on row 2), as in 供.
+- 映: 央's 冂 is one row tall and stands on 大's bar, which runs past both
+  sides, as in 英. Beside 日 the bar joins 日's middle bar (`02-42`), and the
+  vertical starts on the top row (`30-33`).
+- 領: 令 on the left is the roof `10-01; 10-21`, a bar joined to 頁's top
+  (`01-41`), and 卩 as `02-22` with the vertical `12-14` and the slant
+  `13-24`.
+- 閣: the owner joined 夂's short ノ to the crossing of its slants
+  (`21-22`).
+- 揮: 軍 beside 扌 gets a one-row 冖 (`20-40; 20-21; 40-41`). The V goes in
+  車's box on the next row (`22-42; 23-43; 22-33; 42-33`), not under 冖, and
+  車's bars join 扌's (`01-41; 03-43`).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
