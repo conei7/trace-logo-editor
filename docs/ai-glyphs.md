@@ -513,7 +513,7 @@ Then: 評 粉 報 adopted as drawn; 貧 墓 夢 adopted with fixes; 容 being fi
 - 容: the owner moved 宀's roof down to row 1 to give it its dot (`20-21`).
   Most finished 宀 keep the dot (字 家 安 客 実 守 宿 定 害 完 宇 宗 宅 宝 空
   究 案); only the tightest drop it (官 富 宮 室). 額 and 察, which had
-  dropped it, went to a redraw with the dot first (g10-r2).
+  dropped it, have a redraw with the dot first ready (g10-r2).
 - 墓: 大's legs run from its bar through 土 to the bottom corners
   (`22-13-04; 22-33-44`), as 木's legs run through 奈 and 査.
 - 貧: 分's 刀 bends as `21-32` with the ノ `22-13`.
@@ -536,8 +536,31 @@ Then: 拡 簡 adopted as drawn; 異 映 領 閣 揮 adopted with fixes.
 - 閣: the owner joined 夂's short ノ to the crossing of its slants
   (`21-22`).
 - 揮: 軍 beside 扌 gets a one-row 冖 (`20-40; 20-21; 40-41`). The V goes in
-  車's box on the next row (`22-42; 23-43; 22-33; 42-33`), not under 冖, and
-  車's bars join 扌's (`01-41; 03-43`).
+  車's box on the next row (`22-42; 23-43; 22-33; 42-33`), not under 冖.
+  車's top bar joins 扌's (`01-41`), and its bottom bar is on the bottom row
+  (`24-44`) beside 扌's hook `04-14`.
+
+Then: 供 射 推 縮 諸 骨 adopted as drawn; 券 創 呼 奏 姿 源 砂 署 鋼 adopted
+with fixes; 愛 being fixed.
+
+- 券: 龹 gets a short vertical from the top to where the two long slants
+  cross (`20-21`).
+- 奏: the owner joined the long bar to 天 below it (`22-23`); stacked parts
+  touch.
+- 呼: 乎 gets a short bar under its top ノ (`21-31`).
+- 創: 倉 left of 刂 is one column wide under its roof (`10-01; 10-21`): 戸's
+  box with a ╲ inside (`11-22`), 口 below it, and 戸's ノ leaving at the
+  bottom left (`13-04`).
+- 姿: 欠's ノ starts at the top right corner and stops at `22`
+  (`40-31-22`), short of 女. 女 is the stub `12-13` over its X (`13-24;
+  23-14`).
+- 源: 白's tick slants to the top left corner of its box (`30-21`), as in
+  泉. 原 keeps a vertical tick.
+- 砂: both dots of 少 start on the top row (`20-21; 40-41`).
+- 署: 者's ノ runs past 日's corner to the bottom left (`31-04`), as in 都.
+  著, still pending, has a redraw that way ready (g11-r).
+- 鋼: 山 inside 岡 beside 金 is its vertical with a V (`32-33; 22-33;
+  42-33`), without a bottom bar.
 
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
