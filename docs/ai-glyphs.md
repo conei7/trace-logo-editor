@@ -596,6 +596,25 @@ Then: 挙 鏡 adopted as drawn; 協 機 議 旗 adopted with fixes; 競 being fi
 - 旗: 其 keeps to its own column; its bottom bar is `33-43` and does not run
   into 方's hook.
 
+Then: 候 建 最 極 熊 群 験 競 adopted with fixes; 康 rejected a third time
+(a fourth try is ready as g11-r2); 埼 being fixed.
+
+- 候: the short vertical beside 亻 starts at 矦's first bar (`21-23`).
+- 建: 廴 is two zigzags, `00-10; 10-11; 11-02; 02-12; 12-13`, then an X
+  (`13-04; 03-14`) leading into the sweep `14-44`. 聿 gets its own top bar
+  (`20-40`), and its first bar runs left into 廴 (`11-41`).
+- 最: the owner took the V out of the one-row 日 on top (`10-30; 11-31`
+  left empty), as in 者. The V is the default, not a must. 又 is `33-43`
+  with an X in the last cell (`33-44; 43-34`).
+- 極: 亟's 了 is the slant `30-21` with the bar `21-31`, and its vertical
+  runs down through 口 to the bottom bar (`31-34`).
+- 熊: 能's two ヒ stay apart (`30-31; 40-31; 31-41` and `32-33; 42-33;
+  33-43`); 月 is `01-03; 20-23` with the bars `01-21; 02-22; 13-23`, and
+  ム is the slant `10-01` into its corner.
+- 群: 羊's top is a V (`20-31; 40-31`).
+- 験: 僉's middle vertical starts at the bar under the roof (`31-33`).
+- 競: both 儿 reach the bottom row (`14-24`; `42-44` with `34-44`).
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
