@@ -582,6 +582,20 @@ fix; 旗 being fixed.
   two ╱. The V stays the default (賀 貸 資 責).
 - 愛: copy the finished glyph for 心 and 夂 squeezed under 冖.
 
+Then: 挙 鏡 adopted as drawn; 協 機 議 旗 adopted with fixes; 競 being fixed.
+
+- 協: 劦 is one 力 on top (the bar `21-41`, the hook `41-42; 42-32`, the ノ
+  `30-31; 31-22`) over two small 力 sharing the bar `13-43`. Each small
+  力 keeps its hook (`33-34`, `43-44`), and its ノ starts above the bar
+  (`22-23; 23-14`, `32-33; 33-24`).
+- 機: each 幺 of 幾 squeezed into one column is two stacked X (`20-31;
+  30-21; 21-32; 31-22`, and the same one column to the right), with the
+  vertical `30-33` between them.
+- 議: 我's left ノ is `22-13`, and 戈's ノ is the short `43-34` crossing its
+  slant in the last cell, as in 義.
+- 旗: 其 keeps to its own column; its bottom bar is `33-43` and does not run
+  into 方's hook.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
