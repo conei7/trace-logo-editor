@@ -512,8 +512,8 @@ Then: 評 粉 報 adopted as drawn; 貧 墓 夢 adopted with fixes; 容 being fi
 
 - 容: the owner moved 宀's roof down to row 1 to give it its dot (`20-21`).
   Most finished 宀 keep the dot (字 家 安 客 実 守 宿 定 害 完 宇 宗 宅 宝 空
-  究 案); only the tightest drop it (官 富 宮 室). 額 and 察, which had
-  dropped it, have a redraw with the dot first ready (g10-r2).
+  究 案); only the tightest drop it (官 富 宮 室 察). 額, which had
+  dropped it, has a redraw with the dot first ready (g10-r2).
 - 墓: 大's legs run from its bar through 土 to the bottom corners
   (`22-13-04; 22-33-44`), as 木's legs run through 奈 and 査.
 - 貧: 分's 刀 bends as `21-32` with the ノ `22-13`.
@@ -614,6 +614,26 @@ Then: 候 建 最 極 熊 群 験 競 adopted with fixes; 康 rejected a third t
 - 群: 羊's top is a V (`20-31; 40-31`).
 - 験: 僉's middle vertical starts at the bar under the roof (`31-33`).
 - 競: both 儿 reach the bottom row (`14-24`; `42-44` with `34-44`).
+
+Then: 周 残 辞 鹿 adopted as drawn; 参 察 崎 散 滋 産 埼 adopted with fixes; 焼
+being fixed.
+
+- 察: the owner kept the roof without its dot (`00-40` with `00-01;
+  40-41`) and redrew 祭's top: 夕 as `11-21` with `11-02; 01-12; 11-22`,
+  又 as `31-41; 41-32` with `21-43`, and the long ╱ `21-03`.
+- 参: 大's legs start at 厶's bar and cross the long bar (`21-03; 21-43`);
+  彡 is three ╱ under it (`22-13; 32-14; 33-24`).
+- 散: 龷 and 月 share the two left columns: full-height sides `00-04;
+  10-14`, the bars `01-21; 02-22` and two ╲ inside (`02-13; 03-14`). 攵
+  keeps its own bar (`31-41`) apart from 龷's.
+- 滋: 兹 leaves the top row empty. Its 丷 is a V (`21-32; 41-32`) over the
+  bar `22-42`, and each 幺 is a ╱ over an X (`32-23` with `23-34; 33-24`,
+  `42-33` with `33-44; 43-34`) on the base `24-44`.
+- 産: 生 under 厂 has its vertical in the middle (`22-24`) with the short
+  bar `13-33`, and its base runs the full width under 厂's side (`04-44`).
+- 崎 埼: 可's hook (`42-44`) stands apart; the base or 口 beside it stops
+  one column short (`04-34`, `24-34`). In 埼 the hook ends in a ╲
+  (`33-44`), and 奇's ノ runs long to the left (`31-13`).
 
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
