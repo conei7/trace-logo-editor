@@ -562,6 +562,26 @@ with fixes; 愛 being fixed.
 - 鋼: 山 inside 岡 beside 金 is its vertical with a V (`32-33; 22-33;
   42-33`), without a bottom bar.
 
+Then: 億 媛 潟 街 観 願 貨 adopted with fixes; 愛 finished after a longer
+fix; 旗 being fixed.
+
+- 億: the one-row 日 of 音 gets its V (`21-32; 41-32`). 心 under it is the
+  slant `23-34` with the bars `33-43; 34-44`.
+- 媛: 爰's ノ drops from the bar first (`31-32`) and then slants to the
+  bottom left (`32-14`).
+- 潟: 臼 at the top of 舄 is closed on the right (`40-42`), with its bars
+  crossing it (`21-41; 22-42`) under the short top bar `20-30`.
+- 街: 圭's top bar runs on into 亍's (`11-41`), and 亍's hook is the slant
+  `33-44`.
+- 観: 隹 on the left takes its bars to the left edge (`02-42; 03-43; 04-24`
+  with the side `02-04`).
+- 願: 原's 白 fills 厂 from its side, and its bars run on into 頁's (`01-41;
+  02-42; 03-43`). 白's tick is the slant `30-21`, as in 源. 小 is `13-14`
+  with the legs `13-04; 13-24`.
+- 貨: the one-row 貝 takes two ╲ inside (`12-23; 22-33`), as in 賞; 貧 has
+  two ╱. The V stays the default (賀 貸 資 責).
+- 愛: copy the finished glyph for 心 and 夂 squeezed under 冖.
+
 When a hand fix fails, the owner can now press `やめて却下` in the app: the
 glyph goes back to what it held before adoption and the proposal becomes
 rejected with `triedVariant` set. `harvest` records it as a rejection.
